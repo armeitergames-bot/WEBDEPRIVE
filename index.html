@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PRIVÉ — Archive</title>
+    <meta name="description" content="PRIVÉ. Lujo de calle. Archivo de ediciones limitadas.">
+    
+    <meta property="og:title" content="PRIVÉ — Colaboraciones">
+    <meta property="og:description" content="Lujo de calle en ediciones limitadas.">
+    <meta property="og:image" content="assets/images/og-placeholder.jpg">
+    <meta property="og:type" content="website">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&family=Playfair+Display:ital@1&display=swap" rel="stylesheet">
+
+    <style>
+        /* === Variables & Base (Paleta Lujo-Calle) === */
+        :root {
+            --bg: #0A0A0A;
+            --fg: #F5F5F4;
+            --gray: #6B6B6B;
+            --border: #2E2E2E;
+            --petrol: #0D2B30; /* Azul Petróleo (Terciario) */
+            --petrol-light: #1A4D54;
+            --font-main: 'Inter', system-ui, sans-serif;
+            --font-serif: 'Playfair Display', serif;
+            --transition: 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* === Efecto de Grano Cinematográfico (Texture) === */
+        body::after {
+            content: ""; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 9999; opacity: 0.05;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+        }
+
+        html { scroll-behavior: smooth; }
+
+        * { cursor: none !important; box-sizing: border-box; } /* Custom Cursor activado */
+
+        body {
+            margin: 0; padding: 0; background-color: var(--bg); color: var(--fg);
+            font-family: var(--font-main); -webkit-font-smoothing: antialiased;
+            overflow-x: hidden; display: flex; flex-direction: column; min-height: 100vh;
+        }
+
+        a { text-decoration: none; color: inherit; }
+        ul { list-style: none; padding: 0; margin: 0; }
+        img { display: block; max-width: 100%; height: auto; }
+        button { font-family: inherit; background: none; border: none; color: inherit; outline: none;}
+
+        /* === Custom Cursor CORREGIDO (Sin mix-blend-mode para que no desaparezca) === */
+        #cursor {
+            position: fixed; width: 6px; height: 6px; background: var(--fg);
+            border-radius: 50%; pointer-events: none; z-index: 9999999; /* Siempre arriba de todo */
+            transition: transform 0.1s ease;
+        }
+        #cursor-follower {
+            position: fixed; width: 40px; height: 40px; border: 1px solid rgba(245, 245, 244, 0.3);
+            border-radius: 50%; pointer-events: none; z-index: 9999998; /* Siempre arriba de todo */
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), width 0.3s, height 0.3s, background 0.3s;
+        }
+        .hovering #cursor-follower {
+            width: 80px; height: 80px; background: rgba(13, 43, 48, 0.3); /* Glow Azul Petróleo */
+            border-color: var(--petrol-light); backdrop-filter: blur(2px);
+        }
+
+        /* === Tipografía "Gatekeeper" (Kerning Agresivo) === */
+        h1, h2, h3, h4 { margin: 0; text-transform: uppercase; }
+        h1 { font-size: clamp(4rem, 10vw, 8rem); font-weight: 800; line-height: 0.85; letter-spacing: -0.05em; margin-bottom: 1rem; }
+        h2 { font-size: clamp(2.5rem, 6vw, 5rem); font-weight: 800; line-height: 1; letter-spacing: -0.04em; margin-bottom: 1.5rem; }
+        h3 { font-size: clamp(1rem, 2vw, 1.25rem); font-weight: 600; letter-spacing: 0.1em; color: var(--fg); }
+        p { font-size: 1.125rem; line-height: 1.6; color: var(--gray); font-weight: 300; }
+        
+        .label-serif { font-family: var(--font-serif); font-style: italic; font-size: 1.2rem; color: var(--gray); letter-spacing: 0; text-transform: none; }
+        .text-mono { font-family: monospace; font-size: 0.75rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--gray); }
+
+        /* === Header & Barra de Estado === */
+        header {
+            position: fixed; top: 0; width: 100%; z-index: 100;
+            padding: 1.5rem 5%; display: flex; justify-content: space-between; align-items: center;
+            background: rgba(10, 10, 10, 0.7); backdrop-filter: blur(15px);
+            border-bottom: 1px solid rgba(46, 46, 46, 0.3); transition: padding var(--transition);
+        }
+        .logo { font-size: 1.5rem; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; z-index: 101;}
+        
+        .nav-links { display: flex; gap: 3rem; }
+        .nav-links a { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.15em; color: var(--gray); transition: color 0.3s; }
+        .nav-links a:hover, .nav-links a.active-link { color: var(--fg); }
+        .nav-links a:hover { text-shadow: 0 0 10px var(--petrol-light); } /* Brillo petróleo al hover */
+
+        .hamburger { display: none; z-index: 101; }
+        .hamburger svg { width: 24px; height: 24px; fill: var(--fg); }
+
+        /* === SISTEMA DE PÁGINAS (VISTAS SPA) === */
+        main { flex-grow: 1; padding-top: 80px; display: flex; flex-direction: column; }
+        .page-view {
+            display: none; opacity: 0; padding: 6rem 5% 10rem;
+            max-width: 1600px; margin: 0 auto; width: 100%;
+            animation: fadeInPage 0.8s forwards cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .page-view.active { display: block; }
+
+        @keyframes fadeInPage {
+            from { opacity: 0; transform: translateY(30px); filter: blur(5px); }
+            to { opacity: 1; transform: translateY(0); filter: blur(0); }
+        }
+
+        /* === Headers Internos Editoriales === */
+        .page-header { margin-bottom: 6rem; max-width: 900px; border-bottom: 1px solid var(--border); padding-bottom: 3rem; }
+        .badge-status {
+            display: inline-block; margin-bottom: 1.5rem; font-size: 0.7rem; font-weight: 800;
+            padding: 0.5rem 1rem; border: 1px solid var(--border); text-transform: uppercase; letter-spacing: 0.2em;
+        }
+        .badge-status.sold-out { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+        .badge-status.soon { color: var(--petrol-light); border-color: var(--petrol-light); }
+
+        /* === Hero (Index) === */
+        #home {
+            height: calc(100vh - 80px); min-height: 600px; display: flex; flex-direction: column;
+            justify-content: center; align-items: center; text-align: center; padding: 0 5%; margin: 0; max-width: 100%;
+        }
+        .hero-bg-text { position: absolute; font-size: 20vw; font-weight: 800; color: rgba(255,255,255,0.02); z-index: -1; line-height: 0.8; white-space: nowrap; pointer-events: none;}
+        
+        .btn-lujo {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 1.2rem 3.5rem; border: 1px solid var(--border); color: var(--fg);
+            text-transform: uppercase; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.2em;
+            transition: var(--transition); background: transparent; position: relative; overflow: hidden;
+        }
+        .btn-lujo::before {
+            content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+            background: var(--petrol); transition: left var(--transition); z-index: -1;
+        }
+        .btn-lujo:hover::before { left: 0; }
+        .btn-lujo:hover { border-color: var(--petrol); }
+
+        /* === Índice Editorial (Colecciones) === */
+        .archive-list { display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--border); margin-top: 4rem;}
+        .archive-list a {
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: clamp(2rem, 5vw, 4.5rem); font-weight: 800; text-transform: uppercase; letter-spacing: -0.03em;
+            color: var(--border); transition: var(--transition);
+            border-bottom: 1px solid var(--border); padding: 2rem 0;
+        }
+        .archive-list a span { font-family: var(--font-serif); font-size: 1.2rem; font-style: italic; letter-spacing: 0; color: var(--gray); transition: var(--transition); }
+        .archive-list a:hover { color: var(--fg); padding-left: 2rem; background: linear-gradient(90deg, rgba(13,43,48,0.2) 0%, transparent 50%); }
+        .archive-list a:hover span { color: var(--petrol-light); }
+
+        /* === Grillas de Vanguardia (Asimétricas) === */
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 4rem 2rem; margin-top: 2rem; }
+        
+        /* Efecto Broken Grid en Desktop */
+        @media (min-width: 1024px) {
+            .grid .product:nth-child(even) { transform: translateY(6rem); }
+        }
+
+        .product { position: relative; display: flex; flex-direction: column; margin: 0; }
+        .product-img-wrapper {
+            position: relative; overflow: hidden; background: radial-gradient(circle at center, #1a1a1a 0%, #050505 100%);
+            aspect-ratio: 4/5; margin-bottom: 1.5rem; transition: background var(--transition);
+        }
+        .product:hover .product-img-wrapper { background: radial-gradient(circle at center, var(--petrol) 0%, #050505 100%); }
+
+        .product-img {
+            width: 100%; height: 100%; object-fit: cover;
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
+            transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .product:hover .product-img { transform: scale(1.08) rotate(-2deg); }
+
+        .product-caption { font-size: 1rem; font-weight: 600; margin-bottom: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
+        .product-serial { font-family: monospace; color: var(--gray); font-size: 0.75rem; letter-spacing: 0.1em; }
+
+        .badge.sold {
+            position: absolute; top: 1rem; right: 1rem; background: var(--bg); color: var(--fg);
+            padding: 0.5rem 1rem; font-size: 0.7rem; font-weight: 800; letter-spacing: 0.1em;
+            border: 1px solid var(--fg); z-index: 2; pointer-events: none;
+        }
+
+        /* === Manifiesto / Filosofía === */
+        .manifesto-layout { display: grid; grid-template-columns: 1fr; gap: 4rem; }
+        @media (min-width: 1024px) { .manifesto-layout { grid-template-columns: 1fr 1fr; align-items: center; } }
+        .manifesto-text p { margin-bottom: 2rem; font-size: clamp(1.2rem, 2vw, 1.8rem); line-height: 1.4; color: var(--fg); }
+        
+        /* === Footer === */
+        footer { border-top: 1px solid var(--border); padding: 5rem 5% 3rem; background: #050505; margin-top: auto; position: relative; }
+        .footer-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 4rem; margin-bottom: 4rem; }
+        .footer-col h3 { font-size: 0.7rem; margin-bottom: 2rem; color: var(--gray); letter-spacing: 0.2em; }
+        .footer-col li { margin-bottom: 1rem; }
+        .footer-col a { color: var(--fg); font-size: 0.875rem; transition: color 0.3s; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;}
+        .footer-col a:hover { color: var(--petrol-light); }
+        .copyright { text-align: center; color: var(--border); font-size: 0.75rem; padding-top: 2rem; border-top: 1px solid var(--border); letter-spacing: 0.2em; }
+        
+        /* Easter Egg Trigger */
+        .trigger-dp { cursor: none; color: inherit; transition: color 0.3s; }
+        .trigger-dp:hover { color: var(--petrol-light); text-shadow: 0 0 10px var(--petrol); }
+
+        /* === Easter Egg Modal (Double P Records) RECUPERADO === */
+        #easter-egg {
+            position: fixed; inset: 0; background: var(--bg); z-index: 99999;
+            display: none; align-items: center; justify-content: center; flex-direction: column;
+            opacity: 0; transition: opacity 1s ease; text-align: center;
+        }
+        #easter-egg.active { display: flex; opacity: 1; }
+        
+        .dp-glitch { font-size: 10vw; font-weight: 800; color: var(--petrol); letter-spacing: -0.05em; line-height: 0.85; margin: 0; text-shadow: 2px 0 var(--fg), -2px 0 var(--bg); animation: glitch 0.2s linear infinite alternate-reverse;}
+        .dp-text { font-family: monospace; color: var(--fg); letter-spacing: 0.3em; margin-top: 3rem; text-align: center; }
+        
+        @keyframes glitch {
+            0% { transform: skewX(0deg); }
+            20% { transform: skewX(-5deg); text-shadow: 4px 0 #1A4D54, -4px 0 #F5F5F4; }
+            40% { transform: skewX(5deg); }
+            60% { transform: skewX(0deg); }
+            100% { transform: skewX(2deg); }
+        }
+
+        /* === Lightbox Modal === */
+        .lightbox {
+            position: fixed; inset: 0; background: rgba(10, 10, 10, 0.98); backdrop-filter: blur(20px);
+            z-index: 10000; display: flex; align-items: center; justify-content: center;
+            opacity: 0; pointer-events: none; transition: opacity var(--transition);
+        }
+        .lightbox.active { opacity: 1; pointer-events: auto; }
+        .lightbox-content { display: flex; flex-direction: column; align-items: center; max-width: 90%; max-height: 90vh; transform: scale(0.95); transition: transform var(--transition); }
+        .lightbox.active .lightbox-content { transform: scale(1); }
+        .lightbox-img { max-height: 65vh; max-width: 100%; object-fit: contain; filter: drop-shadow(0 30px 40px rgba(0,0,0,0.8)); }
+        .lightbox-info { text-align: center; margin-top: 2rem; }
+        .lightbox-nav { position: absolute; top: 50%; transform: translateY(-50%); padding: 2rem; }
+        .lightbox-nav.prev { left: 2rem; }
+        .lightbox-nav.next { right: 2rem; }
+        .lightbox-nav svg, .lightbox-close svg { width: 32px; height: 32px; stroke: var(--fg); stroke-width: 1.5; fill: none; transition: stroke 0.3s;}
+        .lightbox-close { position: absolute; top: 2rem; right: 2rem; padding: 2rem; }
+        .lightbox-nav:hover svg, .lightbox-close:hover svg { stroke: var(--petrol-light); }
+
+        @media (max-width: 768px) {
+            #cursor, #cursor-follower { display: none; }
+            * { cursor: auto !important; }
+            .hamburger { display: block; }
+            .nav-links {
+                position: fixed; top: 0; right: -100%; width: 100%; height: 100vh;
+                background: var(--bg); flex-direction: column; justify-content: center; align-items: center;
+                transition: right var(--transition);
+            }
+            .nav-links.active { right: 0; }
+            .nav-links a { font-size: 1.5rem; letter-spacing: 0.1em; }
+            .grid { gap: 4rem; }
+            .lightbox-nav { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cursor"></div>
+    <div id="cursor-follower"></div>
+
+    <header id="navbar">
+        <a href="#home" class="logo hover-target">PRIVÉ</a>
+        <nav>
+            <button class="hamburger hover-target" aria-expanded="false" aria-label="Abrir menú" aria-controls="nav-menu">
+                <svg viewBox="0 0 24 24"><path d="M3 12h18M3 6h18M3 18h18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            </button>
+            <ul class="nav-links" id="nav-menu">
+                <li><a href="#home" class="hover-target">Index</a></li>
+                <li><a href="#colecciones" class="hover-target">Archive</a></li>
+                <li><a href="#omar-camacho" class="hover-target">Omar</a></li>
+                <li><a href="#one-dilemma" class="hover-target">One D.</a></li>
+                <li><a href="#jasiel-nunez" class="hover-target">Jasiel</a></li>
+                <li><a href="#colaboraciones" class="hover-target">Manifiesto</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <main>
+        <section class="page-view hero active" id="home">
+            <div class="hero-bg-text">ARCHIVE</div>
+            <span class="text-mono" style="margin-bottom: 2rem; display: block;">PV—001 / BASE</span>
+            <h1>PRIVÉ<br><span class="label-serif">Archive</span></h1>
+            <p style="max-width: 500px; margin: 0 auto 3rem;">Lujo de calle documentado. Ediciones estrictamente limitadas. No re-stocks.</p>
+            <a href="#colecciones" class="btn-lujo hover-target">Ingresar al Archivo</a>
+        </section>
+
+        <section class="page-view" id="colecciones">
+            <div class="page-header" style="border:none; padding:0; margin-bottom: 2rem;">
+                <span class="text-mono">DIRECTORIO</span>
+                <h2 class="scramble-text">Archivo_</h2>
+            </div>
+            
+            <div class="archive-list">
+                <a href="#omar-camacho" class="hover-target">Omar Camacho <span>[ Sold Out ]</span></a>
+                <a href="#one-dilemma" class="hover-target">One Dilemma <span>[ Inbound ]</span></a>
+                <a href="#jasiel-nunez" class="hover-target">Jasiel Núñez <span>[ Inbound ]</span></a>
+            </div>
+        </section>
+
+        <section class="page-view" id="omar-camacho">
+            <div class="page-header">
+                <div class="badge-status sold-out">Status: SOLD OUT</div>
+                <h2 class="scramble-text">Omar Camacho</h2>
+                <span class="label-serif">Volumen 01</span>
+                <p style="margin-top: 2rem; max-width: 600px;">La cápsula inaugural. Siluetas audaces, materiales pesados y paleta sobria. Agotado a nivel global en horas.</p>
+            </div>
+            
+            <div class="gallery gallery--omar grid" role="list">
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./omar-camacho/sudadera-4x4.PNG" alt="Sudadera Privé x Omar Camacho" data-artist="omar" data-index="0" class="product-img">
+                        <span class="badge sold">SOLD OUT</span>
+                    </div>
+                    <figcaption class="product-caption">Sudadera 4x4</figcaption>
+                    <span class="product-serial">PV-OM-01</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./omar-camacho/gorra-2-2.PNG" alt="Gorra 2+2" data-artist="omar" data-index="1" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Gorra 2+2</figcaption>
+                    <span class="product-serial">PV-OM-02</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./omar-camacho/gorra-ciudad-del-sol.PNG" alt="Gorra Ciudad del Sol" data-artist="omar" data-index="2" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Gorra Ciudad del Sol</figcaption>
+                    <span class="product-serial">PV-OM-03</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./omar-camacho/gorra-edicion-limitada.PNG" alt="Gorra Edición Limitada" data-artist="omar" data-index="3" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Gorra Edición Limitada</figcaption>
+                    <span class="product-serial">PV-OM-04</span>
+                </figure>
+            </div>
+        </section>
+
+        <section class="page-view" id="one-dilemma">
+            <div class="page-header">
+                <div class="badge-status soon">Status: PENDING</div>
+                <h2 class="scramble-text">One Dilemma</h2>
+                <span class="label-serif">Volumen 02</span>
+                <p style="margin-top: 2rem; max-width: 600px;">Utilitarismo elevado. Cortes arquitectónicos y estéticos crudos diseñados para el movimiento de la ciudad.</p>
+            </div>
+
+            <div class="gallery gallery--oned grid" role="list">
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./one-dilemma/playera-d.PNG" alt="Playera D - One Dilemma" data-artist="oned" data-index="0" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Playera D</figcaption>
+                    <span class="product-serial">PV-OD-01</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./one-dilemma/pantalon-d.PNG" alt="Pantalon D - One Dilemma" data-artist="oned" data-index="1" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Pantalón D</figcaption>
+                    <span class="product-serial">PV-OD-02</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./one-dilemma/sudadera-d.PNG" alt="Sudadera D - One Dilemma" data-artist="oned" data-index="2" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Sudadera D</figcaption>
+                    <span class="product-serial">PV-OD-03</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./one-dilemma/gorra-d.PNG" alt="Gorra D - One Dilemma" data-artist="oned" data-index="3" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Gorra D</figcaption>
+                    <span class="product-serial">PV-OD-04</span>
+                </figure>
+            </div>
+        </section>
+
+        <section class="page-view" id="jasiel-nunez">
+            <div class="page-header">
+                <div class="badge-status soon">Status: PENDING</div>
+                <h2 class="scramble-text">Jasiel Núñez</h2>
+                <span class="label-serif">Volumen 03</span>
+                <p style="margin-top: 2rem; max-width: 600px;">Una cápsula hiperenfocada. El contraste perfecto entre la sombra y el detalle. Calidad de galería para uso diario.</p>
+            </div>
+
+            <div class="gallery gallery--jasiel grid" role="list" style="grid-template-columns: repeat(auto-fit, minmax(350px, 500px)); justify-content: flex-start;">
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./jasiel-nunez/gorra-corazon-frio.PNG" alt="Gorra Corazón Frío - Jasiel Núñez" data-artist="jasiel" data-index="0" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Gorra — Corazón Frío</figcaption>
+                    <span class="product-serial">PV-JN-01</span>
+                </figure>
+                <figure class="product hover-target" role="listitem">
+                    <div class="product-img-wrapper" tabindex="0">
+                        <img loading="lazy" src="./jasiel-nunez/gorra-formula-one.PNG" alt="Gorra Formula One - Jasiel Núñez" data-artist="jasiel" data-index="1" class="product-img">
+                    </div>
+                    <figcaption class="product-caption">Gorra Formula One</figcaption>
+                    <span class="product-serial">PV-JN-02</span>
+                </figure>
+            </div>
+        </section>
+
+        <section class="page-view" id="colaboraciones">
+            <div class="manifesto-layout">
+                <div class="manifesto-text">
+                    <span class="text-mono">ABOUT US</span>
+                    <h2 class="scramble-text" style="margin: 1rem 0 3rem;">Manifiesto_</h2>
+                    <p>Privé no fabrica ropa, documenta momentos de nuestra cultura. Cada colaboración es un diálogo entre nuestra estética minimalista y la identidad cruda del artista.</p>
+                    <p>Creemos en la escasez. No seguimos el calendario tradicional de la moda; lanzamos cuando la visión está completa. Nuestras piezas son artefactos.</p>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <footer id="footer">
+        <div class="footer-grid">
+            <div class="footer-col">
+                <h3>CONTACT_</h3>
+                <ul>
+                    <li><a href="https://www.instagram.com/prive.official_?igsh=ZHRweWR5dGUxeTNn&utm_source=qr" target="_blank" rel="noopener noreferrer" class="hover-target">Instagram</a></li>
+                </ul>
+            </div>
+            <div class="footer-col">
+                <h3>LEGAL_</h3>
+                <ul>
+                    <li><a href="#" class="hover-target">Términos</a></li>
+                    <li><a href="#" class="hover-target">Privacidad</a></li>
+                </ul>
+            </div>
+            <div class="footer-col" style="grid-column: 1 / -1; max-width: 400px;">
+                <h3>ACCESS_CODE</h3>
+                <form onsubmit="event.preventDefault();" style="display: flex; border-bottom: 1px solid var(--border);">
+                    <input type="email" placeholder="ENTER EMAIL" required aria-label="Correo" style="background:transparent; border:none; color:var(--fg); width:100%; padding: 1rem 0; outline:none; text-transform:uppercase;">
+                    <button type="submit" class="hover-target" style="color:var(--gray); text-transform:uppercase; font-size:0.75rem; font-weight:800;">Submit</button>
+                </form>
+            </div>
+        </div>
+        <div class="copyright">
+            PRIVÉ ARCHIVE © 2026<span id="trigger-dp" class="trigger-dp">.</span> ALL RIGHTS RESERVED
+        </div>
+    </footer>
+
+    <div class="lightbox" id="lightbox" role="dialog" aria-modal="true">
+        <button class="lightbox-close hover-target" aria-label="Cerrar modal" id="lightbox-close">
+            <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        <button class="lightbox-nav prev hover-target" aria-label="Imagen anterior" id="lightbox-prev">
+            <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+        
+        <div class="lightbox-content">
+            <img src="" alt="" class="lightbox-img" id="lightbox-img">
+            <div class="lightbox-info">
+                <h3 id="lightbox-title"></h3>
+                <span id="lightbox-desc" class="product-serial"></span>
+            </div>
+        </div>
+
+        <button class="lightbox-nav next hover-target" aria-label="Imagen siguiente" id="lightbox-next">
+            <svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </button>
+    </div>
+
+    <div id="easter-egg">
+        <h1 class="dp-glitch">DOUBLE P<br>RECORDS</h1>
+        <div class="dp-text">
+            [ CLASSIFIED COLLABORATION ]<br><br>
+            AWAITING DEPLOYMENT...
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            
+            /* --- 1. Audio UI (Web Audio API) --- */
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            const playClick = () => {
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(800, audioCtx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.05);
+                gain.gain.setValueAtTime(0.02, audioCtx.currentTime); // Volumen muy bajo y elegante
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.05);
+                osc.start();
+                osc.stop(audioCtx.currentTime + 0.05);
+            };
+
+            /* --- 2. Custom Cursor --- */
+            const cursor = document.getElementById('cursor');
+            const follower = document.getElementById('cursor-follower');
+            
+            document.addEventListener('mousemove', (e) => {
+                cursor.style.transform = `translate(${e.clientX - 3}px, ${e.clientY - 3}px)`;
+                follower.style.transform = `translate(${e.clientX - 20}px, ${e.clientY - 20}px)`;
+            });
+
+            document.querySelectorAll('.hover-target, .product-img-wrapper').forEach(el => {
+                el.addEventListener('mouseenter', () => {
+                    document.body.classList.add('hovering');
+                    playClick(); // Sonido al pasar el mouse por elementos interactivos
+                });
+                el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+            });
+
+            /* --- 3. Scramble Text Effect --- */
+            const scrambleText = (element) => {
+                const originalText = element.getAttribute('data-text') || element.innerText;
+                element.setAttribute('data-text', originalText);
+                const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_*#@";
+                let iteration = 0;
+                
+                const interval = setInterval(() => {
+                    element.innerText = originalText.split("")
+                        .map((letter, index) => {
+                            if(index < iteration) return originalText[index];
+                            return chars[Math.floor(Math.random() * chars.length)];
+                        }).join("");
+                    
+                    if(iteration >= originalText.length) clearInterval(interval);
+                    iteration += 1 / 2; // Velocidad del decodificado
+                }, 30);
+            };
+
+            /* --- 4. NAVEGACIÓN SPA --- */
+            const pages = document.querySelectorAll('.page-view');
+            const navLinks = document.querySelectorAll('.nav-links a');
+            
+            const router = () => {
+                let hash = window.location.hash.substring(1) || 'home';
+                
+                if(hash === 'footer') {
+                    document.getElementById('footer').scrollIntoView({behavior: 'smooth'});
+                    return;
+                }
+
+                pages.forEach(page => page.classList.remove('active'));
+                
+                const targetPage = document.getElementById(hash);
+                if (targetPage) {
+                    targetPage.classList.add('active');
+                    // Ejecutar efecto scramble en los títulos de la página activa
+                    targetPage.querySelectorAll('.scramble-text').forEach(scrambleText);
+                } else {
+                    document.getElementById('home').classList.add('active');
+                }
+
+                window.scrollTo({ top: 0, behavior: 'auto' });
+
+                navLinks.forEach(link => {
+                    link.classList.remove('active-link');
+                    if(link.getAttribute('href') === `#${hash}`) link.classList.add('active-link');
+                });
+            };
+
+            window.addEventListener('hashchange', router);
+            router(); // Inicio
+
+            /* --- 5. Menú Móvil --- */
+            const hamburger = document.querySelector('.hamburger');
+            const navMenu = document.getElementById('nav-menu');
+
+            const toggleMenu = () => {
+                const isExpanded = hamburger.getAttribute('aria-expanded') === 'true';
+                hamburger.setAttribute('aria-expanded', !isExpanded);
+                navMenu.classList.toggle('active');
+                document.body.style.overflow = !isExpanded ? 'hidden' : '';
+            };
+
+            hamburger.addEventListener('click', toggleMenu);
+            navLinks.forEach(link => link.addEventListener('click', () => {
+                if (navMenu.classList.contains('active')) toggleMenu();
+            }));
+
+            /* --- 6. Lightbox Gallery --- */
+            const lightbox = document.getElementById('lightbox');
+            const lbImg = document.getElementById('lightbox-img');
+            const lbTitle = document.getElementById('lightbox-title');
+            const lbDesc = document.getElementById('lightbox-desc');
+            
+            let currentGallery = [];
+            let currentIndex = 0;
+
+            const updateLightbox = () => {
+                if(currentGallery.length === 0) return;
+                const imgElement = currentGallery[currentIndex];
+                lbImg.src = imgElement.src;
+                lbImg.alt = imgElement.alt;
+                // Obtener datos del padre (figcaption y serial)
+                const figure = imgElement.closest('.product');
+                lbTitle.textContent = figure.querySelector('.product-caption').textContent;
+                lbDesc.textContent = figure.querySelector('.product-serial').textContent;
+            };
+
+            const openLightbox = (imgElement) => {
+                playClick();
+                const galleryClass = imgElement.closest('.gallery').classList[1];
+                currentGallery = Array.from(document.querySelectorAll(`.${galleryClass} .product-img`));
+                currentIndex = currentGallery.indexOf(imgElement);
+                
+                updateLightbox();
+                lightbox.classList.add('active');
+                document.body.style.overflow = 'hidden'; 
+            };
+
+            const closeLightbox = () => {
+                lightbox.classList.remove('active');
+                document.body.style.overflow = '';
+            };
+
+            const changeImage = (dir) => {
+                playClick();
+                currentIndex = (currentIndex + dir + currentGallery.length) % currentGallery.length;
+                updateLightbox();
+            };
+
+            document.querySelectorAll('.product-img-wrapper').forEach(wrapper => {
+                const img = wrapper.querySelector('img');
+                wrapper.addEventListener('click', () => openLightbox(img));
+                wrapper.addEventListener('keydown', (e) => { if(e.key === 'Enter') openLightbox(img); });
+            });
+
+            document.getElementById('lightbox-close').addEventListener('click', closeLightbox);
+            document.getElementById('lightbox-next').addEventListener('click', () => changeImage(1));
+            document.getElementById('lightbox-prev').addEventListener('click', () => changeImage(-1));
+            
+            lightbox.addEventListener('click', (e) => { if (e.target === lightbox) closeLightbox(); });
+
+            document.addEventListener('keydown', (e) => {
+                if (!lightbox.classList.contains('active')) return;
+                if (e.key === 'Escape') closeLightbox();
+                if (e.key === 'ArrowRight') changeImage(1);
+                if (e.key === 'ArrowLeft') changeImage(-1);
+            });
+
+            /* --- 7. EASTER EGG (DOUBLE P RECORDS) RECUPERADO CON FUNCIONES --- */
+            const dpTrigger = document.getElementById('trigger-dp');
+            const dpScreen = document.getElementById('easter-egg');
+
+            dpTrigger.addEventListener('click', (e) => {
+                e.preventDefault();
+                playClick();
+                dpScreen.classList.add('active');
+                document.body.style.overflow = 'hidden';
+                
+                // Efecto de sonido de estática (ruido blanco) para el modal
+                if(audioCtx.state === 'suspended') audioCtx.resume();
+                const bufferSize = audioCtx.sampleRate * 2; 
+                const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) { data[i] = Math.random() * 2 - 1; }
+                const noise = audioCtx.createBufferSource();
+                noise.buffer = buffer;
+                const noiseFilter = audioCtx.createBiquadFilter();
+                noiseFilter.type = 'lowpass';
+                noiseFilter.frequency.value = 1000;
+                const noiseGain = audioCtx.createGain();
+                noiseGain.gain.value = 0.05;
+                noise.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(audioCtx.destination);
+                noise.start();
+
+                // Cerrar al hacer click en cualquier lado
+                dpScreen.addEventListener('click', () => {
+                    dpScreen.classList.remove('active');
+                    document.body.style.overflow = '';
+                    noise.stop();
+                }, {once: true});
+            });
+        });
+    </script>
+</body>
+</html>
