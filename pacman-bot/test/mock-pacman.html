@@ -1,0 +1,150 @@
+<!doctype html>
+<!-- Pac-Man de prueba hecho con elementos DOM (como el doodle de Google) para probar el bot. -->
+<html><head><meta charset="utf-8"><title>Mock pacman</title>
+<style>
+ body{background:#000;margin:20px}
+ #pf{position:relative;width:224px;height:248px;background:#000}
+ .w{position:absolute;width:8px;height:8px;background:#22d}
+ .d{position:absolute;width:2px;height:2px;background:#fb9}
+ .e{position:absolute;width:6px;height:6px;background:#fb9;border-radius:3px}
+ .a{position:absolute;width:16px;height:16px;border-radius:8px}
+ #hud{color:#fff;font:12px monospace}
+</style></head><body>
+<div id="hud"></div>
+<div id="wrap"><div id="pf"></div></div>
+<script>
+const MAP = [
+"############################",
+"#............##............#",
+"#.####.#####.##.#####.####.#",
+"#o####.#####.##.#####.####o#",
+"#.####.#####.##.#####.####.#",
+"#..........................#",
+"#.####.##.########.##.####.#",
+"#.####.##.########.##.####.#",
+"#......##....##....##......#",
+"######.##### ## #####.######",
+"     #.##### ## #####.#     ",
+"     #.##          ##.#     ",
+"     #.## ###--### ##.#     ",
+"######.## #      # ##.######",
+"      .   #      #   .      ",
+"######.## #      # ##.######",
+"     #.## ######## ##.#     ",
+"     #.##          ##.#     ",
+"     #.## ######## ##.#     ",
+"######.## ######## ##.######",
+"#............##............#",
+"#.####.#####.##.#####.####.#",
+"#.####.#####.##.#####.####.#",
+"#o..##.......  .......##..o#",
+"###.##.##.########.##.##.###",
+"###.##.##.########.##.##.###",
+"#......##....##....##......#",
+"#.##########.##.##########.#",
+"#.##########.##.##########.#",
+"#..........................#",
+"############################"];
+const W=28,H=31,TS=8;
+const pf=document.getElementById('pf');
+const wall=(c,r)=>{ if(c<0||c>=W) return r!==14; const ch=MAP[r][c]; return ch==='#'||ch==='-'; };
+for(let r=0;r<H;r++)for(let c=0;c<W;c++) if(MAP[r][c]==='#'){const e=document.createElement('div');e.className='w';e.style.left=c*TS+'px';e.style.top=r*TS+'px';pf.appendChild(e);}
+let dots=[];
+function placeDots(){
+  dots.forEach(d=>d.el.remove()); dots=[];
+  for(let r=0;r<H;r++)for(let c=0;c<W;c++){const ch=MAP[r][c]; if(ch==='.'||ch==='o'){const e=document.createElement('div');const big=ch==='o';e.className=big?'e':'d';
+    e.style.left=(c*TS+4-(big?3:1))+'px';e.style.top=(r*TS+4-(big?3:1))+'px';pf.appendChild(e);dots.push({c,r,big,el:e,alive:true});}}
+}
+const DIR={L:[-1,0],R:[1,0],U:[0,-1],D:[0,1]}, REV={L:'R',R:'L',U:'D',D:'U'};
+function mk(color){const e=document.createElement('div');e.className='a';e.style.background=color;e.style.backgroundPosition=color;document.getElementById('wrap').appendChild(e);return e;}
+// Los actores viven fuera de #pf (como hermanos), con un desfase de medio tile para probar la calibración
+const G={level:1,score:0,deaths:0,lives:3,levelsCleared:0,games:0,frightUntil:0,t:0,maxLevel:1};
+const pac={el:mk('#ff0'),x:13.5,y:23,dir:'L',want:'L',speed:7.5};
+const ghostDefs=[['#f00',13.5,11],['#fbb',13.5,14],['#0ff',11.5,14],['#fb5',15.5,14]];
+const ghosts=ghostDefs.map(([col,x,y],i)=>({el:mk(col),col,x0:x,y0:y,x,y,dir:'L',speed:7,i,release:i*2.5,state:'house'}));
+function resetActors(){pac.x=13.5;pac.y=23;pac.dir='L';pac.want='L';
+  ghosts.forEach(g=>{g.x=g.x0;g.y=g.y0;g.state=g.i===0?'out':'house';g.dir='L';g.releaseAt=G.t+g.release;});G.frightUntil=0;G.ready=G.t+1;}
+function newGame(){G.level=1;G.lives=3;G.games++;placeDots();resetActors();}
+function canGo(x,y,d,isGhost){const c=Math.round(x),r=Math.round(y);const [dc,dr]=DIR[d];const nc=c+dc,nr=r+dr;
+  if(nr===14&&(nc<0||nc>=W))return true; if(nr<0||nr>=H)return false; const ch=MAP[nr][(nc+W)%W]; if(ch==='#')return false; if(ch==='-')return !!isGhost; return true;}
+function moveActor(a,step,isGhost,choose){
+  let remaining=step;
+  while(remaining>1e-9){
+    const cx=Math.round(a.x),cy=Math.round(a.y);
+    const [dc,dr]=DIR[a.dir];
+    const toCenter=(cx-a.x)*dc+(cy-a.y)*dr; // distancia hasta el centro en la dirección actual
+    if(toCenter>1e-9){const s=Math.min(remaining,toCenter);a.x+=dc*s;a.y+=dr*s;remaining-=s;continue;}
+    // en el centro (o pasado): alinear
+    if(Math.abs(toCenter)<1e-9){a.x=cx;a.y=cy;
+      choose&&choose(a);
+      if(!canGo(a.x,a.y,a.dir,isGhost)){return;}
+    }
+    const [dc2,dr2]=DIR[a.dir];const s=Math.min(remaining,0.5);a.x+=dc2*s;a.y+=dr2*s;remaining-=s;
+    if(a.x<-1)a.x+=W+1; if(a.x>W)a.x-=W+1;
+  }
+}
+function pacChoose(a){ if(a.want!==a.dir&&canGo(a.x,a.y,a.want,false))a.dir=a.want; }
+function dist2(ax,ay,bx,by){return (ax-bx)**2+(ay-by)**2;}
+function ghostTarget(g){
+  const scatter=((G.t%27)<7);
+  if(g.state==='eyes')return [13.5,11];
+  if(scatter)return [[25,-3],[2,-3],[27,33],[0,33]][g.i];
+  const [pdx,pdy]=DIR[pac.dir];
+  if(g.i===0)return [pac.x,pac.y];
+  if(g.i===1)return [pac.x+4*pdx,pac.y+4*pdy];
+  if(g.i===2){const b=ghosts[0];return [2*(pac.x+2*pdx)-b.x,2*(pac.y+2*pdy)-b.y];}
+  return dist2(g.x,g.y,pac.x,pac.y)>64?[pac.x,pac.y]:[0,33];
+}
+function ghostChoose(g){
+  const opts=Object.keys(DIR).filter(d=>d!==REV[g.dir]&&canGo(g.x,g.y,d,g.state==='eyes'||g.state==='leaving'));
+  if(!opts.length){g.dir=REV[g.dir];return;}
+  if(g.state==='fright'){g.dir=opts[Math.floor(Math.random()*opts.length)];return;}
+  const [tx,ty]=ghostTarget(g);let best=opts[0],bd=1e9;
+  for(const d of opts){const [dc,dr]=DIR[d];const dd=dist2(g.x+dc,g.y+dr,tx,ty);if(dd<bd){bd=dd;best=d;}}
+  g.dir=best;
+}
+let last=performance.now();
+function step(){
+  const now=performance.now();let dt=Math.min(0.05,(now-last)/1000);last=now;G.t+=dt;
+  if(G.t<G.ready){render();return;}
+  const lvlMul=Math.min(1+0.05*(G.level-1),1.25);
+  moveActor(pac,pac.speed*lvlMul*dt,false,pacChoose);
+  // reversa inmediata
+  if(pac.want===REV[pac.dir])pac.dir=pac.want;
+  const pc=Math.round(pac.x),pr=Math.round(pac.y);
+  for(const d of dots)if(d.alive&&d.c===pc&&d.r===pr){d.alive=false;d.el.style.display='none';G.score+=d.big?50:10;
+    if(d.big){const fr=[6,5,4,3,2,5,2,2,1,5,2,1,1,3,1,1,0,1][Math.min(G.level-1,17)];G.frightUntil=G.t+fr;ghosts.forEach(g=>{if(g.state==='out'){g.state='fright';g.dir=REV[g.dir];}});}}
+  if(G.t>G.frightUntil)ghosts.forEach(g=>{if(g.state==='fright')g.state='out';});
+  for(const g of ghosts){
+    if(g.state==='house'){g.y=g.y0+Math.sin(G.t*6)*0.4;if(G.t>g.releaseAt){g.x=13.5;g.y=11;g.state='out';g.dir='L';}continue;}
+    const sp=(g.state==='fright'?0.55:g.state==='eyes'?1.8:1)*g.speed*lvlMul*(Math.round(g.y)===14&&(g.x<6||g.x>21)?0.5:1);
+    moveActor(g,sp*dt,g.state==='eyes',ghostChoose);
+    if(g.state==='eyes'&&Math.abs(g.x-13.5)<1&&Math.abs(g.y-11)<0.6){g.x=13.5;g.y=11;g.state='out';}
+    if(dist2(g.x,g.y,pac.x,pac.y)<0.5){
+      if(g.state==='fright'){g.state='eyes';G.score+=200;G.ghostsEaten=(G.ghostsEaten||0)+1;}
+      else if(g.state==='out'){G.deaths++;G.lives--;if(G.lives<0){newGame();}else resetActors();render();return;}
+    }
+  }
+  if(dots.every(d=>!d.alive)){G.level++;G.levelsCleared++;G.maxLevel=Math.max(G.maxLevel,G.level);placeDots();resetActors();}
+  // parpadeo de energizantes
+  const blink=Math.floor(G.t*4)%2===0;
+  for(const d of dots)if(d.big&&d.alive)d.el.style.visibility=blink?'visible':'hidden';
+  render();
+}
+function place(el,x,y){el.style.left=(x*TS+4-8+4)+'px';el.style.top=(y*TS+4-8+12)+'px';}
+function render(){
+  place(pac.el,pac.x,pac.y);
+  for(const g of ghosts){
+    const fr=g.state==='fright', eyes=g.state==='eyes';
+    const bg=eyes?'#fff3':fr?(G.frightUntil-G.t<1&&Math.floor(G.t*5)%2?'#fff':'#22f'):g.col;
+    g.el.style.background=bg;g.el.className='a '+(eyes?'eyes':fr?'fright':'g'+g.i);
+    place(g.el,g.x,g.y);
+  }
+  document.getElementById('hud').textContent=`L${G.level} score ${G.score} lives ${G.lives} deaths ${G.deaths}`;
+}
+document.getElementById('wrap').style.position='relative';
+document.addEventListener('keydown',e=>{const m={37:'L',38:'U',39:'R',40:'D'}[e.keyCode];if(m){pac.want=m;e.preventDefault();}});
+newGame();
+setInterval(step,1000/60);
+window.__mock=G;
+</script></body></html>

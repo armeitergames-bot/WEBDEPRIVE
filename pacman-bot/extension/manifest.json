@@ -1,0 +1,43 @@
+{
+  "manifest_version": 3,
+  "name": "PacBot — bot para el Pac-Man de Google",
+  "version": "1.0.0",
+  "description": "Un bot que juega solo al Pac-Man de Google: esquiva fantasmas, se los come y pasa niveles.",
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.google.com/*",
+        "*://*.google.es/*",
+        "*://*.google.com.mx/*",
+        "*://*.google.com.ar/*",
+        "*://*.google.com.co/*",
+        "*://*.google.cl/*",
+        "*://*.google.com.pe/*",
+        "*://*.google.com.ve/*",
+        "*://*.google.com.ec/*",
+        "*://*.google.com.do/*",
+        "*://*.google.com.gt/*",
+        "*://*.google.com.uy/*",
+        "*://*.google.com.py/*",
+        "*://*.google.com.bo/*",
+        "*://*.google.com.sv/*",
+        "*://*.google.hn/*",
+        "*://*.google.com.ni/*",
+        "*://*.google.co.cr/*",
+        "*://*.google.com.pa/*",
+        "*://*.google.com.pr/*",
+        "*://*.google.com.cu/*",
+        "*://*.google.us/*",
+        "*://*.google.ca/*",
+        "*://*.google.co.uk/*"
+      ],
+      "js": [
+        "bot.js"
+      ],
+      "run_at": "document_start",
+      "all_frames": true,
+      "match_about_blank": true,
+      "world": "MAIN"
+    }
+  ]
+}
