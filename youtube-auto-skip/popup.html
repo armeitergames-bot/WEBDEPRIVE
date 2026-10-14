@@ -3,19 +3,26 @@
 <head>
   <meta charset="utf-8">
   <style>
-    body { font-family: system-ui, sans-serif; width: 220px; margin: 0; padding: 14px; background: #fff; color: #111; }
-    h1 { font-size: 14px; margin: 0 0 12px; }
-    label { display: flex; align-items: center; justify-content: space-between; font-size: 13px; cursor: pointer; }
+    body { font-family: system-ui, sans-serif; width: 260px; margin: 0; padding: 14px; background: #fff; color: #111; }
+    h1 { font-size: 14px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+    h1 img { width: 20px; height: 20px; }
+    label { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; cursor: pointer; margin-bottom: 4px; }
+    small { display: block; font-size: 11px; color: #666; margin: 0 0 10px; }
     p { font-size: 12px; color: #555; margin: 12px 0 0; }
     @media (prefers-color-scheme: dark) {
       body { background: #202124; color: #eee; }
-      p { color: #aaa; }
+      small, p { color: #aaa; }
     }
   </style>
 </head>
 <body>
-  <h1>YouTube Auto Skip Ads</h1>
-  <label>Saltar anuncios automáticamente <input type="checkbox" id="enabled"></label>
+  <h1><img src="icons/icon32.png" alt="">YouTube Auto Skip Ads</h1>
+  <label>Activada <input type="checkbox" id="enabled"></label>
+  <small>Salta solos los anuncios de vídeo y oculta los banners.</small>
+  <label>Quitar anuncios por completo <input type="checkbox" id="remove"></label>
+  <small>Evita que YouTube cargue los anuncios. Recarga la página para aplicar. Si YouTube muestra un aviso de bloqueador, desactívalo.</small>
+  <label>Clic real en "Saltar" <input type="checkbox" id="trustedClick"></label>
+  <small>YouTube ignora los clics automáticos normales. Chrome mostrará un aviso amarillo de depuración un momento.</small>
   <p>Anuncios saltados: <strong id="count">0</strong></p>
   <script src="popup.js"></script>
 </body>

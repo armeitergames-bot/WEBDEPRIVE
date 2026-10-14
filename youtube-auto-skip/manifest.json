@@ -1,10 +1,11 @@
 {
   "manifest_version": 3,
   "name": "YouTube Auto Skip Ads",
-  "version": "1.1.0",
-  "description": "Salta automáticamente los anuncios de vídeo de YouTube y oculta los anuncios de banner.",
+  "version": "1.2.0",
+  "description": "Quita los anuncios de YouTube y salta automáticamente los que no se puedan quitar.",
   "permissions": [
-    "storage"
+    "storage",
+    "debugger"
   ],
   "content_scripts": [
     {
@@ -12,13 +13,22 @@
         "*://*.youtube.com/*"
       ],
       "js": [
-        "content.js"
+        "remove-ads.js"
       ],
       "run_at": "document_start",
-      "all_frames": false,
+      "world": "MAIN"
+    },
+    {
+      "matches": [
+        "*://*.youtube.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
       "css": [
         "hide-ads.css"
-      ]
+      ],
+      "run_at": "document_start"
     }
   ],
   "action": {
@@ -36,5 +46,8 @@
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
+  },
+  "background": {
+    "service_worker": "background.js"
   }
 }

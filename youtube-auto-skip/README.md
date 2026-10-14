@@ -13,20 +13,29 @@ Extensión para Chrome/Edge/Brave (Manifest V3) que pulsa automáticamente el bo
 
 ## Uso
 
-Haz clic en el icono de la extensión para activarla/desactivarla y ver cuántos
-anuncios se han saltado.
+Haz clic en el icono de la extensión para ver el contador y estas opciones:
+
+- **Activada**: enciende o apaga todo.
+- **Quitar anuncios por completo**: evita que YouTube cargue los anuncios (recarga la
+  página para aplicar). Si YouTube muestra un aviso de bloqueador de anuncios, desactívala.
+- **Clic real en "Saltar"**: YouTube ignora los clics automáticos normales, así que la
+  extensión hace un clic real con el permiso de depuración. Chrome muestra un aviso
+  amarillo ("... ha empezado a depurar este navegador") mientras dura el anuncio.
 
 ## Cómo funciona
 
-- **Anuncios de vídeo** (antes o durante el vídeo): `content.js` detecta cuando el
-  reproductor muestra un anuncio (clase `ad-showing`). Pulsa **"Saltar anuncio"** si
-  está disponible y, además, silencia el anuncio y lo adelanta hasta el final, así que
-  también se saltan los anuncios que no tienen botón de saltar. Al terminar, el sonido
-  se restaura.
-- **Anuncios superpuestos** sobre el vídeo: se cierran automáticamente.
-- **Banners y anuncios patrocinados** de la página: se ocultan con `hide-ads.css`.
-
-Al desactivar la extensión desde su icono, deja de hacer todo lo anterior.
+1. **Quitar los anuncios** (`remove-ads.js`): se ejecuta dentro de la página antes que
+   YouTube y borra `adPlacements`, `adSlots` y `playerAds` de la respuesta del
+   reproductor, igual que hace uBlock Origin. Así el anuncio ni siquiera se carga.
+2. **Saltar los que se cuelen** (`content.js`): algunos anuncios van incrustados en el
+   propio vídeo (SSAP) y no se pueden quitar. Cuando el reproductor muestra un anuncio
+   (clase `ad-showing`), la extensión:
+   - lo silencia y lo reproduce a 16x (no lo adelanta al final, porque eso deja el
+     anuncio congelado y con los anuncios incrustados saltaría al final del vídeo);
+   - pulsa "Saltar anuncio" en cuanto aparece y, si YouTube ignora el clic, hace un
+     clic real (`background.js`, `chrome.debugger`);
+   - si el anuncio termina pero se queda en pantalla, vuelve a intentar el clic real.
+3. **Anuncios superpuestos y banners**: se cierran o se ocultan (`hide-ads.css`).
 
 Si YouTube cambia el nombre de las clases, basta con añadir el nuevo selector a
 `SKIP_SELECTORS` en `content.js` o a `hide-ads.css`.

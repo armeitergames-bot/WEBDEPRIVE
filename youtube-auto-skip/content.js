@@ -1,8 +1,10 @@
-// Salta los anuncios de vídeo de YouTube:
-// 1. Pulsa "Saltar anuncio" si el botón está disponible.
-// 2. Si no se puede (anuncio no saltable o YouTube ignora el clic),
-//    silencia el anuncio y lo adelanta hasta el final.
-// También cierra los anuncios superpuestos (banners sobre el vídeo).
+// Salta los anuncios de vídeo de YouTube que no se pudieron quitar con remove-ads.js:
+// 1. Mientras dura el anuncio lo silencia y lo reproduce a 16x (sin saltar al final,
+//    porque eso deja el anuncio congelado y rompe los anuncios incrustados en el vídeo).
+// 2. En cuanto aparece "Saltar anuncio" lo pulsa; si YouTube ignora el clic
+//    normal, hace un clic real con chrome.debugger.
+// 3. Si el anuncio termina pero se queda en pantalla, vuelve a intentar el clic real.
+// También cierra los anuncios superpuestos y oculta los banners (hide-ads.css).
 (() => {
   const SKIP_SELECTORS = [
     '.ytp-skip-ad-button',
@@ -17,20 +19,36 @@
     '.ytp-ad-overlay-close-container'
   ].join(',');
 
-  let enabled = true;
-  let currentAdVideo = null; // vídeo del anuncio que ya contamos
-  let mutedByUs = false;
+  const settings = { enabled: true, remove: true, trustedClick: true };
 
-  chrome.storage.sync.get({ enabled: true }, (data) => {
-    enabled = data.enabled;
+  let inAd = false;
+  let savedRate = 1;
+  let mutedByUs = false;
+  let lastClick = 0;
+  let lastTrustedClick = 0;
+  let endedSince = 0;
+
+  function mirrorToPage() {
+    // remove-ads.js corre en la página y no puede leer chrome.storage: le pasamos los ajustes.
+    try {
+      localStorage.setItem('yt-auto-skip:enabled', settings.enabled ? '1' : '0');
+      localStorage.setItem('yt-auto-skip:remove', settings.remove ? '1' : '0');
+    } catch (e) { /* ignorar */ }
+  }
+
+  chrome.storage.sync.get(settings, (data) => {
+    Object.assign(settings, data);
+    mirrorToPage();
     tick();
   });
 
   chrome.storage.onChanged.addListener((changes, area) => {
-    if (area === 'sync' && changes.enabled) {
-      enabled = changes.enabled.newValue;
-      tick();
+    if (area !== 'sync') return;
+    for (const key of Object.keys(settings)) {
+      if (changes[key]) settings[key] = changes[key].newValue;
     }
+    mirrorToPage();
+    tick();
   });
 
   function isVisible(el) {
@@ -41,14 +59,39 @@
     return rect.width > 0 && rect.height > 0;
   }
 
-  function clickSkipButton() {
+  function findSkipButton() {
     for (const btn of document.querySelectorAll(SKIP_SELECTORS)) {
-      if (isVisible(btn) && !btn.disabled) {
-        btn.click();
-        return true;
-      }
+      if (isVisible(btn) && !btn.disabled) return btn;
     }
-    return false;
+    return null;
+  }
+
+  function trustedClick(el) {
+    if (!settings.trustedClick) return;
+    const now = Date.now();
+    if (now - lastTrustedClick < 1000) return;
+    lastTrustedClick = now;
+    const r = el.getBoundingClientRect();
+    chrome.runtime.sendMessage({
+      type: 'trusted-click',
+      x: r.left + r.width / 2,
+      y: r.top + r.height / 2
+    }).catch(() => {});
+  }
+
+  function trySkip(force) {
+    const btn = findSkipButton();
+    if (!btn) return;
+    const now = Date.now();
+    if (now - lastClick < 400 && !force) return;
+    lastClick = now;
+    btn.click();
+    // Si a los 400 ms el botón sigue ahí, YouTube ignoró el clic: hacer uno real.
+    setTimeout(() => {
+      const still = findSkipButton();
+      if (still && inAd) trustedClick(still);
+    }, 400);
+    if (force) trustedClick(btn);
   }
 
   function closeOverlays() {
@@ -63,51 +106,79 @@
     });
   }
 
+  function startAd(video) {
+    inAd = true;
+    endedSince = 0;
+    savedRate = video.playbackRate || 1;
+    countSkip();
+  }
+
+  function endAd(video) {
+    inAd = false;
+    endedSince = 0;
+    if (video) {
+      video.playbackRate = savedRate;
+      if (mutedByUs) video.muted = false;
+    }
+    mutedByUs = false;
+    chrome.runtime.sendMessage({ type: 'ad-finished' }).catch(() => {});
+  }
+
   function tick() {
-    document.documentElement.classList.toggle('yt-auto-skip-on', enabled);
-    if (!enabled) return;
-    closeOverlays();
+    document.documentElement.classList.toggle('yt-auto-skip-on', settings.enabled);
 
     const player = document.querySelector('#movie_player.html5-video-player, .html5-video-player');
     const video = player && player.querySelector('video');
-    if (!player || !video) return;
+    const adShowing = !!player && player.classList.contains('ad-showing');
 
-    if (player.classList.contains('ad-showing')) {
-      if (currentAdVideo !== video.src) {
-        currentAdVideo = video.src;
-        countSkip();
-      }
+    if (!settings.enabled) {
+      if (inAd) endAd(video);
+      return;
+    }
 
-      clickSkipButton();
+    closeOverlays();
+    if (!video) return;
 
-      // Adelantar el anuncio hasta el final.
-      if (!video.muted) {
-        video.muted = true;
-        mutedByUs = true;
-      }
-      if (Number.isFinite(video.duration) && video.duration > 0 &&
-          video.currentTime < video.duration - 0.1) {
-        video.currentTime = video.duration;
-      }
-      if (video.paused) video.play().catch(() => {});
+    if (!adShowing) {
+      if (inAd) endAd(video);
+      return;
+    }
+
+    if (!inAd) startAd(video);
+
+    if (!video.muted) {
+      video.muted = true;
+      mutedByUs = true;
+    }
+    if (video.playbackRate !== 16) video.playbackRate = 16;
+    if (video.paused && !video.ended) video.play().catch(() => {});
+
+    trySkip(false);
+
+    // Anuncio terminado pero sigue en pantalla: forzar el clic real.
+    const atEnd = video.ended ||
+      (Number.isFinite(video.duration) && video.duration > 0 &&
+       video.currentTime >= video.duration - 0.3);
+    if (atEnd) {
+      if (!endedSince) endedSince = Date.now();
+      else if (Date.now() - endedSince > 1500) trySkip(true);
     } else {
-      currentAdVideo = null;
-      if (mutedByUs) {
-        video.muted = false;
-        mutedByUs = false;
-      }
+      endedSince = 0;
     }
   }
 
-  // Reacciona a cambios del DOM (aparición del anuncio, cambio de clases del reproductor).
-  const observer = new MutationObserver(tick);
-  observer.observe(document.documentElement, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ['class', 'src']
-  });
+  function start() {
+    const observer = new MutationObserver(tick);
+    observer.observe(document.documentElement, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ['class', 'src']
+    });
+    setInterval(tick, 250);
+    tick();
+  }
 
-  // Respaldo por si algún cambio no dispara el observer.
-  setInterval(tick, 300);
+  if (document.documentElement) start();
+  else document.addEventListener('DOMContentLoaded', start, { once: true });
 })();
