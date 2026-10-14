@@ -18,10 +18,15 @@ anuncios se han saltado.
 
 ## Cómo funciona
 
-`content.js` vigila el reproductor de YouTube. Mientras se muestra un anuncio
-(clase `ad-showing`), busca el botón de saltar y lo pulsa en cuanto está visible,
-es decir, cuando acaba la cuenta atrás. Los anuncios que no se pueden saltar se
-reproducen con normalidad.
+- **Anuncios de vídeo** (antes o durante el vídeo): `content.js` detecta cuando el
+  reproductor muestra un anuncio (clase `ad-showing`). Pulsa **"Saltar anuncio"** si
+  está disponible y, además, silencia el anuncio y lo adelanta hasta el final, así que
+  también se saltan los anuncios que no tienen botón de saltar. Al terminar, el sonido
+  se restaura.
+- **Anuncios superpuestos** sobre el vídeo: se cierran automáticamente.
+- **Banners y anuncios patrocinados** de la página: se ocultan con `hide-ads.css`.
 
-Si YouTube cambia el nombre de las clases del botón, basta con añadir el nuevo
-selector a `SKIP_SELECTORS` en `content.js`.
+Al desactivar la extensión desde su icono, deja de hacer todo lo anterior.
+
+Si YouTube cambia el nombre de las clases, basta con añadir el nuevo selector a
+`SKIP_SELECTORS` en `content.js` o a `hide-ads.css`.

@@ -1,0 +1,15 @@
+/* Oculta anuncios de banner y patrocinados de la página de YouTube. */
+html.yt-auto-skip-on #player-ads,
+html.yt-auto-skip-on #masthead-ad,
+html.yt-auto-skip-on ytd-ad-slot-renderer,
+html.yt-auto-skip-on ytd-in-feed-ad-layout-renderer,
+html.yt-auto-skip-on ytd-banner-promo-renderer,
+html.yt-auto-skip-on ytd-promoted-sparkles-web-renderer,
+html.yt-auto-skip-on ytd-promoted-video-renderer,
+html.yt-auto-skip-on ytd-display-ad-renderer,
+html.yt-auto-skip-on ytd-compact-promoted-video-renderer,
+html.yt-auto-skip-on ytd-rich-item-renderer:has(> #content > ytd-ad-slot-renderer),
+html.yt-auto-skip-on .ytp-ad-overlay-container,
+html.yt-auto-skip-on .ytp-ad-overlay-slot {
+  display: none !important;
+}
