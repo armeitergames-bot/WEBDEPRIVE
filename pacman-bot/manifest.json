@@ -1,9 +1,12 @@
 {
   "manifest_version": 3,
   "name": "Pac-Man Doodle Pro Bot",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Un bot que juega solo el doodle de Pac-Man de Google como un profesional.",
-  "icons": { "128": "icon128.png", "48": "icon48.png" },
+  "icons": {
+    "128": "icon128.png",
+    "48": "icon48.png"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -33,11 +36,24 @@
         "*://*.github.io/*",
         "file:///*"
       ],
-      "js": ["src/brain.js", "src/hook.js"],
+      "js": [
+        "src/brain.js",
+        "src/hook.js"
+      ],
       "run_at": "document_start",
       "all_frames": true,
       "match_about_blank": true,
       "world": "MAIN"
     }
-  ]
+  ],
+  "action": {
+    "default_title": "Jugar Pac-Man con el bot",
+    "default_icon": {
+      "48": "icon48.png",
+      "128": "icon128.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
+  }
 }

@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <title>Pac-Man Doodle + Bot</title>
+  <style>
+    body{background:#222;font-family:monospace;margin:40px 0;color:#bbb;text-align:center}
+    #wrapper{width:554px;height:186px;padding:10px;background:#000;border-radius:8px;margin:0 auto}
+    #logo{width:554px;height:186px;background:black url(src/pacman10-hp.gif) 0 0 no-repeat;position:relative}
+    #logo-l{width:200px;height:2px;left:177px;top:157px;background:#990;position:absolute;display:none;overflow:hidden}
+    #logo-b{position:absolute;left:0;background:#ff0;height:8px;width:0}
+    button{margin-top:18px;font:15px arial,sans-serif;padding:6px 16px;cursor:pointer}
+    p{max-width:560px;margin:18px auto;line-height:1.5}
+    kbd{background:#444;color:#fff;padding:1px 6px;border-radius:3px}
+  </style>
+  <script src="../src/brain.js"></script>
+  <script src="../src/hook.js"></script>
+  <script src="boot.js"></script>
+</head>
+<body>
+  <div id="wrapper">
+    <div id="logo"><div id="logo-l"><div id="logo-b"></div></div></div>
+  </div>
+  <button id="coin">Nueva partida</button>
+  <p>El bot juega solo. <kbd>B</kbd> enciende/apaga el bot (apagado juegas tú con las flechas) ·
+     <kbd>R</kbd> auto-reinicio tras Game Over.</p>
+  <p style="font-size:11px;color:#777">Doodle © 2010 Google · PAC-MAN™ © 1980 NAMCO BANDAI Games Inc.</p>
+  <script src="start.js"></script>
+</body>
+</html>

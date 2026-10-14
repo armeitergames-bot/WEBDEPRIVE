@@ -9,13 +9,14 @@ Extensión de Chrome/Edge/Brave que hace que el **doodle de Pac-Man de Google**
 2. Abre `chrome://extensions` (en Edge: `edge://extensions`).
 3. Activa **Modo de desarrollador** (arriba a la derecha).
 4. Pulsa **Cargar descomprimida** y elige la carpeta `pacman-bot/`.
-5. Abre el doodle, por ejemplo:
-   - https://www.google.com/logos/2010/pacman10-i.html
-   - https://www.google.com/doodles/30th-anniversary-of-pac-man
-   - o busca "pacman" en Google y dale a jugar.
-
-Si ya tenías el doodle abierto, **recarga la página**: el bot tiene que cargarse
-antes que el juego.
+5. **Forma más fácil:** pulsa el icono de la extensión (el Pac-Man amarillo en la
+   barra de Chrome; si no se ve, búscalo en el icono de la pieza de puzzle 🧩 y
+   fíjalo). Se abre una copia del doodle incluida en la extensión y el bot
+   empieza a jugar solo.
+6. También intenta conectarse al doodle en Google, por ejemplo
+   https://www.google.com/logos/2010/pacman10-i.html. Si ya lo tenías abierto,
+   **recarga la página**: el bot tiene que cargarse antes que el juego. Si ahí
+   aparece el aviso rojo **"PAC-BOT: no conectado"**, usa el icono de la extensión.
 
 Abajo a la derecha aparece un recuadro amarillo **PAC-BOT**:
 
@@ -23,6 +24,9 @@ Abajo a la derecha aparece un recuadro amarillo **PAC-BOT**:
 | --- | --- |
 | `B` o clic en el recuadro | Encender / apagar el bot (puedes retomar tú el control) |
 | `R` | Auto-reinicio: cuando hay Game Over, mete otra moneda solo |
+
+No hace falta tocar las flechas: el bot mueve a Pac-Man directamente. Si lo
+apagas con `B`, juegas tú con las flechas.
 
 Requiere Chrome 111 o más nuevo.
 

@@ -122,7 +122,31 @@
   var hud = null;
   function updateHud() {
     var G = bot.G;
-    if (!G || !G.canvasEl || !document.body) return;
+    if (!document.body) return;
+    if (!G || !G.canvasEl) {
+      // Diagnóstico: hay un Pac-Man en la página pero no pudimos conectarnos
+      if (document.getElementById('pcm-c') || (window.google && window.google.pacman)) {
+        ensureHudEl('#ff6b6b');
+        hud.innerHTML = '<b>PAC-BOT: no conectado</b><br>Recarga la página (F5).<br>' +
+          'Si sigue así, pulsa el icono de la extensión<br>para abrir el Pac-Man incluido.';
+        if (!bot._diagLogged) {
+          bot._diagLogged = true;
+          log('juego visible pero sin conexión. google.pacman=' +
+            (window.google && window.google.pacman ? Object.keys(window.google.pacman).join(',') : 'no'));
+        }
+      }
+      return;
+    }
+    ensureHudEl('#ffd200');
+    var score = G.score ? G.score[0] : 0;
+    var avg = bot.stats.plans ? (bot.stats.ms / bot.stats.plans).toFixed(1) : '-';
+    hud.innerHTML = '<b>PAC-BOT ' + (bot.enabled ? 'ON' : 'OFF') + '</b>' +
+      (bot.autoRestart ? ' · auto-restart' : '') +
+      '<br>nivel ' + (G.level || 0) + ' · score ' + score + ' · vidas ' + (G.lives != null ? G.lives : '-') +
+      '<br>plan ' + avg + ' ms (máx ' + bot.stats.maxMs.toFixed(0) + ')';
+  }
+
+  function ensureHudEl(color) {
     if (!hud || !hud.isConnected) {
       hud = document.createElement('div');
       hud.id = 'pacbot-hud';
@@ -133,12 +157,8 @@
       hud.addEventListener('click', function () { toggle(); });
       document.body.appendChild(hud);
     }
-    var score = G.score ? G.score[0] : 0;
-    var avg = bot.stats.plans ? (bot.stats.ms / bot.stats.plans).toFixed(1) : '-';
-    hud.innerHTML = '<b>PAC-BOT ' + (bot.enabled ? 'ON' : 'OFF') + '</b>' +
-      (bot.autoRestart ? ' · auto-restart' : '') +
-      '<br>nivel ' + (G.level || 0) + ' · score ' + score + ' · vidas ' + (G.lives != null ? G.lives : '-') +
-      '<br>plan ' + avg + ' ms (máx ' + bot.stats.maxMs.toFixed(0) + ')';
+    hud.style.color = color;
+    hud.style.borderColor = color;
   }
 
   function toggle() {
