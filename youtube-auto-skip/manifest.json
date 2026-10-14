@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Auto Skip Ads",
+  "version": "1.0.0",
+  "description": "Pulsa automáticamente el botón \"Saltar anuncio\" de YouTube en cuanto termina el tiempo de espera.",
+  "permissions": ["storage"],
+  "content_scripts": [
+    {
+      "matches": ["*://*.youtube.com/*"],
+      "js": ["content.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ],
+  "action": {
+    "default_title": "YouTube Auto Skip Ads",
+    "default_popup": "popup.html"
+  }
+}
