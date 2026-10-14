@@ -10,7 +10,7 @@ const secs = +(process.argv[2] || 60);
 const turbo = +(process.argv[3] || 1);
 const bot = fs.readFileSync(path.join(here, '../extension/bot.js'), 'utf8');
 
-const browser = await chromium.launch();
+const browser = await chromium.launch(process.env.CHROMIUM_PATH ? { executablePath: process.env.CHROMIUM_PATH } : {});
 const page = await browser.newPage();
 page.on('pageerror', (e) => console.log('PAGE ERROR', e.message));
 await page.addInitScript(bot);
