@@ -1,6 +1,6 @@
 # YouTube Auto Skip Ads
 
-Extensión para Chrome/Edge/Brave (Manifest V3) que pulsa automáticamente el botón
+Extensión para Chrome/Edge/Brave (Manifest V3), para YouTube y YouTube Music, que pulsa automáticamente el botón
 **"Saltar anuncio"** de YouTube en cuanto termina el tiempo de espera del anuncio.
 
 ## Instalación
@@ -34,7 +34,10 @@ Haz clic en el icono de la extensión para ver el contador y estas opciones:
      anuncio congelado y con los anuncios incrustados saltaría al final del vídeo);
    - pulsa "Saltar anuncio" en cuanto aparece y, si YouTube ignora el clic, hace un
      clic real (`background.js`, `chrome.debugger`);
-   - si el anuncio termina pero se queda en pantalla, vuelve a intentar el clic real.
+   - si el anuncio termina pero se queda en pantalla, vuelve a intentar el clic real;
+   - al terminar devuelve el sonido y la velocidad que tenías, también en la API del
+     reproductor (`page-bridge.js`), para que YouTube Music no se quede con la
+     velocidad del anuncio y acelere la canción.
 3. **Anuncios superpuestos y banners**: se cierran o se ocultan (`hide-ads.css`).
 
 Si YouTube cambia el nombre de las clases, basta con añadir el nuevo selector a
