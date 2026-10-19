@@ -9,7 +9,7 @@ comercial y de servicios con fachada de espejo, un cañón verde por dentro y un
 | | |
 |---|---|
 | ![Parque en la azotea](previews/02_parque_azotea.jpg) | ![Llegada por la brecha](previews/03_llegada_brecha.jpg) |
-| ![Cañón interior](previews/04_canon.jpg) | ![Interior con público](previews/05_interior.jpg) |
+| ![Cañón interior](previews/04_canon.jpg) | ![Interior](previews/05_interior.jpg) |
 | ![Grada baja](previews/06_grada_baja.jpg) | ![Vestíbulo](previews/07_vestibulo.jpg) |
 | ![Torre de doble hélice](previews/08_torre_doble_helice.jpg) | ![Techo cerrado](previews/15_techo_cerrado.jpg) |
 | ![Noche](previews/09_noche_aerea.jpg) | ![Noche, techo cerrado](previews/10_noche_interior.jpg) |
@@ -36,7 +36,8 @@ comercial y de servicios con fachada de espejo, un cañón verde por dentro y un
   `13_Anillo_La_Linea` y `20_Ciudad`, y usa `CAM_Subterraneo_Rayos_X` o `CAM_Zona_Jugadores`.
 - **Cámaras:** colección `21_Camaras` → selecciona una y **Ctrl + Numpad 0**.
 - **Letreros explicativos:** colección `22_Etiquetas_Info` (salen en la vista 3D, no en el render).
-- Si la vista 3D va lenta, oculta `05_Publico` y `04_Butacas_Individuales`.
+- El modelo está optimizado: butacas, árboles y autos son **instancias** (un solo modelo repetido),
+  así el archivo pesa ~5 MB. Si aun así la vista 3D va lenta, oculta `04_Butacas_Individuales`.
 
 ## Cómo se sube a los pisos del estadio (circulación vertical)
 
@@ -109,7 +110,7 @@ más el **centro de mando y control** en L1 norte.
 | Fútbol (activo) | cancha FIFA 105 × 68, porterías | 101,384 |
 | Fútbol americano | 120 × 53.3 yd, zonas de anotación, postes amarillos | 101,384 |
 | Rugby | 100 m + in-goal de 10 m, postes H | 101,384 |
-| Concierto | escenario, pantalla, piso protector del pasto, mezcla (FOH), ~14,000 de pie en cancha (se pierden ~10,000 butacas detrás del escenario) | ≈ 105,000 |
+| Concierto | escenario, pantalla, piso protector del pasto, mezcla (FOH), ~9,900 de pie en cancha a 2 personas/m² (se pierden ~10,000 butacas detrás del escenario) | ≈ 101,000 |
 | Arena central | duela de básquet/box y gradas telescópicas a ras de campo (~3,400 más) | ≈ 104,800 |
 
 Atletismo **no** cabe sin mover gradas (la pista de 400 m necesita 177 × 93 m); sería una

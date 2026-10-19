@@ -7,11 +7,11 @@ Generador procedural para Blender (probado en Blender 4.2 LTS y 5.1).
 Cómo usarlo:
   1. Abre Blender  ->  Archivo > Nuevo > General.
   2. Pestaña "Scripting"  ->  "Abrir"  ->  este archivo  ->  "Ejecutar script" (▶).
-  3. Tarda ~1 minuto. ¡OJO! Borra todo lo que haya en el archivo antes de construir.
+  3. Tarda unos segundos. ¡OJO! Borra todo lo que haya en el archivo antes de construir.
 
 Qué genera:
   * Estadio para ~100,000 personas: 3 gradas diseñadas por visibilidad (C-value),
-    butacas individuales, público, vomitorios, 4 vestíbulos, 8 torres de
+    butacas individuales (instancias ligeras), vomitorios, 4 vestíbulos, 8 torres de
     circulación con escalera de doble hélice, escaleras eléctricas, núcleos de
     escape, zona de jugadores, techo retráctil animado (frame 1 abierto,
     frame 120 cerrado) y modos: fútbol, fútbol americano, rugby, concierto y
@@ -285,10 +285,6 @@ def build_materials():
     M['butacas'] = [make_mat(f"Butaca_{i}", h, 0.45) for i, h in enumerate(seat_hex)]
     M['hoja'] = [make_mat(f"Follaje_{i}", h, 0.9)
                  for i, h in enumerate(['#2f6b2f', '#4f8a35', '#6f9f3f', '#8f6fc7', '#3b7d4a'])]
-    M['playera'] = [make_mat(f"Playera_{i}", h, 0.8)
-                    for i, h in enumerate(['#2f7d3a', '#f5f5f5', '#d13b3b', '#2c5aa0', '#f2c230', '#222222'])]
-    M['piel'] = [make_mat(f"Piel_{i}", h, 0.6) for i, h in enumerate(['#e8b98f', '#c68a5a', '#8d5a3b'])]
-    M['pantalon'] = make_mat("Pantalon", '#2b3040', 0.8)
     M['autos'] = [make_mat(f"Auto_{i}", h, 0.3, 0.5)
                   for i, h in enumerate(['#e9e9e9', '#2b2b2b', '#9aa3ad', '#b53a2e', '#2f5f9e'])]
     return M
@@ -343,7 +339,7 @@ def sweep(bm, prof_fn, seg, mat_fn, closed=True, t0=0.0, t1=None):
 def arc_block(bm, t0, t1, d0, d1, z0, z1, mats, tally=None, n=None):
     """Bloque sólido que sigue la curva: mats = (abajo, exterior, arriba, interior, tapa0, tapa1)."""
     if n is None:
-        n = max(1, int(abs(t1 - t0) / (2 * math.pi) * SEG * 1.2) + 1)
+        n = max(1, int(arc_len(t0, t1, (d0 + d1) / 2, 12) / 4.0) + 1)
     prof = [(d0, z0), (d1, z0), (d1, z1), (d0, z1)]
     rings = []
     for j in range(n + 1):
@@ -358,6 +354,19 @@ def arc_block(bm, t0, t1, d0, d1, z0, z1, mats, tally=None, n=None):
                 AREAS[tally[i]] = AREAS.get(tally[i], 0.0) + f.calc_area()
     bm.faces.new(list(reversed(rings[0]))).material_index = mats[4]
     bm.faces.new(rings[-1]).material_index = mats[5]
+
+
+def arc_strip(bm, t0, t1, d, z0, z1, mat, step=8.0):
+    """Franja vertical de una sola cara que sigue la curva (ligera, para luces)."""
+    n = max(1, int(arc_len(t0, t1, d, 12) / step) + 1)
+    prev = None
+    for j in range(n + 1):
+        t = t0 + (t1 - t0) * j / n
+        x, y = se(t, d)
+        cur = (bm.verts.new((x, y, z0)), bm.verts.new((x, y, z1)))
+        if prev:
+            bm.faces.new((prev[0], cur[0], cur[1], prev[1])).material_index = mat
+        prev = cur
 
 
 def arc_len(t0, t1, d, n=40):
@@ -667,7 +676,7 @@ def place_seats(tiers):
 
 
 # ---------- instancias (Geometry Nodes) ----------
-def instancer_tree(name, src):
+def instancer_tree(name, src, use_scale=False):
     ng = bpy.data.node_groups.new(name, 'GeometryNodeTree')
     ng.interface.new_socket("Geometry", in_out='INPUT', socket_type='NodeSocketGeometry')
     ng.interface.new_socket("Geometry", in_out='OUTPUT', socket_type='NodeSocketGeometry')
@@ -682,11 +691,17 @@ def instancer_tree(name, src):
     ng.links.new(gi.outputs[0], inst.inputs['Points'])
     ng.links.new(oi.outputs['Geometry'], inst.inputs['Instance'])
     ng.links.new(attr.outputs['Attribute'], inst.inputs['Rotation'])
+    if use_scale:
+        sc = ng.nodes.new('GeometryNodeInputNamedAttribute')
+        sc.data_type = 'FLOAT_VECTOR'
+        sc.inputs['Name'].default_value = "scl"
+        ng.links.new(sc.outputs['Attribute'], inst.inputs['Scale'])
     ng.links.new(inst.outputs['Instances'], go.inputs[0])
     return ng
 
 
-def make_instancer(name, items, src, coll):
+def make_instancer(name, items, src, coll, scales=None):
+    """items = [(posición, giro_z)]; scales opcional = [escala uniforme]."""
     me = bpy.data.meshes.new(name)
     me.from_pydata([p for p, _ in items], [], [])
     attr = me.attributes.new("rot", 'FLOAT_VECTOR', 'POINT')
@@ -694,10 +709,13 @@ def make_instancer(name, items, src, coll):
     for _, yaw in items:
         flat.extend((0.0, 0.0, yaw))
     attr.data.foreach_set("vector", flat)
+    if scales is not None:
+        sa = me.attributes.new("scl", 'FLOAT_VECTOR', 'POINT')
+        sa.data.foreach_set("vector", [v for k in scales for v in (k, k, k)])
     ob = bpy.data.objects.new(name, me)
     coll.objects.link(ob)
     mod = ob.modifiers.new("Instancias", 'NODES')
-    mod.node_group = instancer_tree("GN_" + name, src)
+    mod.node_group = instancer_tree("GN_" + name, src, scales is not None)
     return ob
 
 
@@ -711,23 +729,15 @@ def make_source(name, build, mats, coll):
 
 
 def seat_mesh(bm):
-    add_box(bm, (0.02, 0, 0.44), (0.42, 0.46, 0.06), 0)
-    add_box(bm, (-0.2, 0, 0.68), (0.05, 0.46, 0.48), 0)
-    add_box(bm, (-0.1, 0, 0.21), (0.06, 0.1, 0.42), 0)
-
-
-def person_seated(bm):
-    add_box(bm, (0.08, 0, 0.52), (0.42, 0.34, 0.14), 2)
-    add_box(bm, (0.30, 0, 0.26), (0.12, 0.30, 0.48), 2)
-    add_box(bm, (-0.12, 0, 0.84), (0.24, 0.38, 0.56), 0)
-    add_blob(bm, (-0.10, 0, 1.24), 0.11, 0.10, 0.13, 1, segs=6, rings=3, jit=0.0)
-
-
-def person_standing(bm):
-    add_box(bm, (0, 0, 0.45), (0.22, 0.32, 0.9), 2)
-    add_box(bm, (0, 0, 1.2), (0.24, 0.40, 0.6), 0)
-    add_box(bm, (0.05, 0.25, 1.55), (0.08, 0.08, 0.5), 1)
-    add_blob(bm, (0, 0, 1.65), 0.11, 0.10, 0.13, 1, segs=6, rings=3, jit=0.0)
+    prof = [(-0.22, 0.05), (-0.17, 0.05), (-0.17, 0.40), (0.24, 0.40), (0.24, 0.47),
+            (-0.17, 0.47), (-0.17, 0.92), (-0.22, 0.92)]
+    a = [bm.verts.new((x, -0.23, z)) for x, z in prof]
+    b = [bm.verts.new((x, 0.23, z)) for x, z in prof]
+    bm.faces.new(a)
+    bm.faces.new(list(reversed(b)))
+    for i in range(len(prof)):
+        i2 = (i + 1) % len(prof)
+        bm.faces.new((a[i], b[i], b[i2], a[i2]))
 
 
 def wheel_mesh(bm):
@@ -742,7 +752,7 @@ def car_mesh(bm):
     add_box(bm, (-0.2, 0, 1.15), (2.3, 1.6, 0.5), 1)
 
 
-def build_seating_instances(M, tiers, coll_seats, coll_crowd, coll_src):
+def build_seating_instances(M, tiers, coll_seats, coll_src):
     seats, wheel, per_tier = place_seats(tiers)
     for c in range(6):
         src = make_source(f"Fuente_Butaca_{c}", seat_mesh, [M['butacas'][c]], coll_src)
@@ -750,20 +760,9 @@ def build_seating_instances(M, tiers, coll_seats, coll_crowd, coll_src):
     src = make_source("Fuente_Silla_Ruedas", wheel_mesh,
                       [M['accesible'], M['acero'], M['butacas'][3]], coll_src)
     make_instancer("Lugares_Silla_de_Ruedas", wheel, src, coll_seats)
-    # público: 72 % de ocupación
-    groups = {i: [] for i in range(6)}
-    for c in range(6):
-        for item in seats[c]:
-            if random.random() < 0.72:
-                groups[random.choice((0, 0, 1, 2, 3, 4, 5))].append(item)
-    for g in range(6):
-        src = make_source(f"Fuente_Persona_{g}", person_seated,
-                          [M['playera'][g], M['piel'][g % 3], M['pantalon']], coll_src)
-        make_instancer(f"Publico_{g}", groups[g], src, coll_crowd)
     STATS['butacas_por_grada'] = per_tier
     STATS['butacas'] = sum(per_tier)
     STATS['sillas_ruedas'] = len(wheel)
-    STATS['publico_render'] = sum(len(v) for v in groups.values())
 
 
 # ==========================================================================
@@ -823,7 +822,7 @@ def build_vertical_circulation(M, tiers, coll):
         add_cyl(bm_g, (c.x, c.y, Z_L0), (c.x, c.y, Z_L2 + 7), TOWER_R, TOWER_R, 0, sides=32, caps=False)
         add_cyl(bm_c, (c.x, c.y, Z_P2), (c.x, c.y, Z_L2 + 9), 2.6, 2.6, 0, sides=16)   # elevadores
         for a0 in (0.0, math.pi):
-            add_helix(bm_s, (c.x, c.y), 3.2, 6.2, Z_L0, Z_L2, 1.62, a0 + e, 0, steps=120)
+            add_helix(bm_s, (c.x, c.y), 3.2, 6.2, Z_L0, Z_L2, 1.62, a0 + e, 0, steps=64)
         n, tan = outward(e, TOWER_D)
         for z in (Z_L05, z_l1, Z_L2):                          # puentes a cada vestíbulo
             add_obox(bm_s, P(e, (FACADE_D + TOWER_D - TOWER_R) / 2, z - 0.25), n, tan,
@@ -991,14 +990,7 @@ def build_modes(M, colls):
     add_box(bm, (-30, 0, zf + 1.5), (8, 12, 3), 1)         # mezcla (FOH)
     finish("Concierto_Escenario", bm, [M['piso_proteccion'], M['escenario'], M['pantalla_esc'], M['acero']],
            colls['concierto'], recalc=False)
-    pts = []
-    for _ in range(14000):                                  # ~2 p/m² frente al escenario
-        x, y = random.uniform(-48, 31), random.uniform(-32, 32)
-        if abs(x + 30) < 6 and abs(y) < 8:
-            continue
-        pts.append(((x, y, zf + 0.11), math.pi + random.uniform(-0.4, 0.4)))
-    STATS['concierto_cancha'] = len(pts)
-    colls['concierto_pts'] = pts
+    STATS['concierto_cancha'] = int(((31 + 48) * 64 - 8 * 12) * 2.0)   # de pie, 2 personas/m²
 
     # --- arena central: duela + gradas temporales ---
     bm = bmesh.new()
@@ -1365,11 +1357,11 @@ def build_ring(M, coll, coll_night):
                     continue
                 if kind == 'window' and WIN_Z[0] - 0.5 <= z <= WIN_Z[1] + 0.5:
                     continue
-                arc_block(bm, pa, pb, RING_OUT, RING_OUT + 0.08, z, z + 0.18, (1,) * 6)
-                arc_block(bm, pa, pb, RING_IN - 0.08, RING_IN, z, z + 0.18, (1,) * 6)
-                arc_block(bm, pa, pb, CANYON_IN, CANYON_IN + 0.1, z + 0.5, z + 3.2, (0,) * 6)
-                arc_block(bm, pa, pb, CANYON_OUT - 0.1, CANYON_OUT, z + 0.5, z + 3.2, (0,) * 6)
-    finish("Noche_Luz_Pisos_Anillo", bm, [M['luz_calida'], M['luz_fria']], coll_night)
+                arc_strip(bm, pa, pb, RING_OUT + 0.05, z, z + 0.18, 1)
+                arc_strip(bm, pa, pb, RING_IN - 0.05, z, z + 0.18, 1)
+                arc_strip(bm, pa, pb, CANYON_IN + 0.05, z + 0.5, z + 3.2, 0)
+                arc_strip(bm, pa, pb, CANYON_OUT - 0.05, z + 0.5, z + 3.2, 0)
+    finish("Noche_Luz_Pisos_Anillo", bm, [M['luz_calida'], M['luz_fria']], coll_night, recalc=False)
 
 
 # ==========================================================================
@@ -1544,7 +1536,7 @@ def build_underground(M, coll, coll_src):
         nn = int(perim(d, 360) / 8.4)
         for k in range(nn):
             t = 2 * math.pi * k / nn
-            add_cyl(bm, P(t, d, Z_P2), P(t, d, Z_L0), 0.4, 0.4, 0, sides=6, caps=False)
+            add_cyl(bm, P(t, d, Z_P2), P(t, d, Z_L0), 0.4, 0.4, 0, sides=4, caps=False)
     finish("Estacionamiento_Losas_y_Columnas", bm, [M['estac']], coll)
 
     # cajones (cuenta) y autos
@@ -1634,21 +1626,19 @@ def build_evacuation(M, coll):
 # ==========================================================================
 # 9. VEGETACIÓN
 # ==========================================================================
-def build_vegetation(M, coll, parks):
-    bm = bmesh.new()
-    mats = [M['corteza']] + M['hoja']
+def build_vegetation(M, coll, parks, coll_src):
+    """Árboles como instancias de 11 modelos (con giro y escala al azar): pesa ~1 % que antes."""
+    buckets = {}
     count = 0
 
     def tree(x, y, z, kind, scale=1.0):
-        leaf = random.choice((1, 1, 2, 3, 5)) if random.random() > 0.08 else 4
-        h = random.uniform(5, 9) * scale
         if kind == 'cipres':
-            add_cyl(bm, (x, y, z), (x, y, z + 2 * scale), 0.3, 0.25, 0, sides=6, caps=False)
-            add_blob(bm, (x, y, z + 6 * scale), 1.5 * scale, 1.5 * scale, 5.0 * scale, 1, segs=6)
+            key = 'cipres'
         else:
-            add_cyl(bm, (x, y, z), (x, y, z + h * 0.6), 0.45 * scale, 0.3 * scale, 0, sides=6, caps=False)
-            r = random.uniform(2.8, 4.8) * scale
-            add_blob(bm, (x, y, z + h * 0.6 + r * 0.6), r, r, r * 0.8, leaf)
+            leaf = random.choice((0, 0, 1, 2, 4)) if random.random() > 0.08 else 3
+            key = f'copa_{leaf}_{random.randrange(2)}'
+        buckets.setdefault(key, []).append((((x, y, z), random.uniform(0, 2 * math.pi)),
+                                            scale * random.uniform(0.8, 1.25)))
 
     tc = STATS['cascada_t']
     for _ in range(900):                    # plaza interior
@@ -1691,7 +1681,20 @@ def build_vegetation(M, coll, parks):
         for _ in range(14):
             tree(cx + random.uniform(-34, 34), cy + random.uniform(-34, 34), 0.0, 'copa')
             count += 1
-    finish("Vegetacion_Nativa", bm, mats, coll)
+    for key, rows in sorted(buckets.items()):
+        if key == 'cipres':
+            def build(bm):
+                add_cyl(bm, (0, 0, 0), (0, 0, 2), 0.3, 0.25, 0, sides=6, caps=False)
+                add_blob(bm, (0, 0, 6), 1.5, 1.5, 5.0, 1, segs=6)
+            mats = [M['corteza'], M['hoja'][0]]
+        else:
+            leaf = int(key.split('_')[1])
+            def build(bm):
+                add_cyl(bm, (0, 0, 0), (0, 0, 4.2), 0.45, 0.3, 0, sides=6, caps=False)
+                add_blob(bm, (0, 0, 6.5), 3.8, 3.8, 3.0, 1)
+            mats = [M['corteza'], M['hoja'][leaf]]
+        src = make_source(f"Fuente_Arbol_{key}", build, mats, coll_src)
+        make_instancer(f"Arboles_{key}", [r[0] for r in rows], src, coll, [r[1] for r in rows])
     STATS['arboles'] = count
 
 
@@ -1958,7 +1961,7 @@ def main():
     names = [
         ('campo', "01_Campo"), ('modo_f', "02a_Modo_Futbol"), ('modo_a', "02b_Modo_Futbol_Americano"),
         ('modo_r', "02c_Modo_Rugby"), ('modo_c', "02d_Modo_Concierto"), ('modo_ar', "02e_Modo_Arena_Central"),
-        ('gradas', "03_Gradas"), ('butacas', "04_Butacas_Individuales"), ('publico', "05_Publico"),
+        ('gradas', "03_Gradas"), ('butacas', "04_Butacas_Individuales"),
         ('vest', "06_Vestibulos_y_Servicios"), ('circ', "07_Circulacion_Vertical"),
         ('jug', "08_Zona_Jugadores_Nivel_Campo"), ('cub', "09_Cubierta_Fija_y_Halo"),
         ('ret', "10_Techo_Retractil_(animado)"), ('arb', "11_Arboles_Estructurales"),
@@ -1976,10 +1979,7 @@ def main():
                       concierto=C['modo_c'], arena=C['modo_ar'])
     build_modes(M, mode_colls)
     tiers = build_stands(M, C['gradas'])
-    build_seating_instances(M, tiers, C['butacas'], C['publico'], C['src'])
-    src = make_source("Fuente_Persona_Parada", person_standing,
-                      [M['playera'][2], M['piel'][1], M['pantalon']], C['src'])
-    make_instancer("Publico_Concierto_Cancha", mode_colls['concierto_pts'], src, C['modo_c'])
+    build_seating_instances(M, tiers, C['butacas'], C['src'])
     build_concourses(M, tiers, C['vest'])
     build_vertical_circulation(M, tiers, C['circ'])
     build_service_pods(M, C['vest'])
@@ -1994,7 +1994,7 @@ def main():
     build_mobility(M, C['mov'])
     build_underground(M, C['sub'], C['src'])
     build_evacuation(M, C['evac'])
-    build_vegetation(M, C['veg'], parks)
+    build_vegetation(M, C['veg'], parks, C['src'])
     report = checks_and_consumption(tiers)
 
     for key in ('modo_a', 'modo_r', 'modo_c', 'modo_ar'):
