@@ -21,9 +21,25 @@
     '.ytp-ad-overlay-close-container'
   ].join(',');
 
+  // Elementos que YouTube solo dibuja mientras hay un anuncio de verdad.
+  const AD_UI_SELECTORS = [
+    '.video-ads.ytp-ad-module > *',
+    '.ytp-ad-player-overlay',
+    '.ytp-ad-player-overlay-layout',
+    '.ytp-ad-preview-container',
+    '.ytp-ad-text',
+    '.ytp-ad-badge',
+    '.ytp-ad-simple-ad-badge',
+    '.ytp-ad-duration-remaining',
+    '.ytp-ad-persistent-progress-bar-container'
+  ].join(',');
+
   const AD_RATE = 16;
-  // Tiempo tras el anuncio durante el que se vigila que YouTube no vuelva a acelerar.
-  const RESTORE_GUARD_MS = 4000;
+  // Nadie escucha una canción o un vídeo a más de 4x (YouTube permite como mucho 2x
+  // y 4x con algunas extensiones): cualquier velocidad mayor la pusimos nosotros.
+  const MAX_USER_RATE = 4;
+  // Si un "anuncio" dura más que esto acelerado, no era un anuncio: soltarlo.
+  const MAX_AD_MS = 20000;
 
   const settings = { enabled: true, remove: true, trustedClick: true };
 
@@ -33,7 +49,8 @@
   let lastClick = 0;
   let lastTrustedClick = 0;
   let endedSince = 0;
-  let guardUntil = 0;
+  let adStartedAt = 0;
+  let ignoreAd = false;  // falsa alarma: no tocar hasta que YouTube quite ad-showing
 
   // Si la extensión se recarga, el script viejo se queda sin acceso a chrome.*:
   // estas llamadas lanzarían errores en bucle.
@@ -124,6 +141,7 @@
   }
 
   function restoreRate(video) {
+    if (contentRate > MAX_USER_RATE) contentRate = 1;
     if (video && video.playbackRate !== contentRate) video.playbackRate = contentRate;
     // Avisar también al reproductor para que no guarde la velocidad del anuncio.
     window.postMessage({ source: 'yt-auto-skip', type: 'restore-rate', rate: contentRate }, '*');
@@ -132,7 +150,7 @@
   function startAd() {
     inAd = true;
     endedSince = 0;
-    guardUntil = 0;
+    adStartedAt = Date.now();
     countSkip();
   }
 
@@ -142,7 +160,6 @@
     if (video && mutedByUs) video.muted = false;
     mutedByUs = false;
     restoreRate(video);
-    guardUntil = Date.now() + RESTORE_GUARD_MS;
     sendToBackground({ type: 'ad-finished' });
   }
 
@@ -152,7 +169,12 @@
     const player = document.getElementById('movie_player') ||
       document.querySelector('.html5-video-player');
     const video = player && player.querySelector('video');
-    const adShowing = !!player && player.classList.contains('ad-showing');
+    // Solo es anuncio si el reproductor tiene ad-showing Y se ve la interfaz del
+    // anuncio. En YouTube Music la clase ad-showing puede quedarse puesta mientras
+    // suena la canción, y entonces la aceleraríamos.
+    const adShowing = !!player && player.classList.contains('ad-showing') &&
+      !!player.querySelector(AD_UI_SELECTORS);
+    if (!adShowing) ignoreAd = false;
 
     if (!settings.enabled) {
       if (inAd) endAd(video);
@@ -162,13 +184,12 @@
     closeOverlays();
     if (!video) return;
 
-    if (!adShowing) {
-      if (inAd) {
-        endAd(video);
-      } else if (Date.now() < guardUntil) {
-        // Justo después del anuncio YouTube puede volver a poner la velocidad del
-        // anuncio en la canción: corregirlo.
-        if (video.playbackRate !== contentRate) restoreRate(video);
+    if (!adShowing || ignoreAd) {
+      if (inAd) endAd(video);
+      if (video.playbackRate > MAX_USER_RATE) {
+        // Fuera de un anuncio la canción/vídeo nunca debe ir acelerada así:
+        // YouTube se quedó con la velocidad del anuncio. Devolver la normal.
+        restoreRate(video);
       } else {
         // Recordar la velocidad que usa el usuario (puede cambiarla cuando quiera).
         contentRate = video.playbackRate;
@@ -177,6 +198,13 @@
     }
 
     if (!inAd) startAd();
+
+    if (Date.now() - adStartedAt > MAX_AD_MS) {
+      // Demasiado largo para ser un anuncio: soltar y dejar sonar normal.
+      ignoreAd = true;
+      endAd(video);
+      return;
+    }
 
     if (!video.muted) {
       video.muted = true;

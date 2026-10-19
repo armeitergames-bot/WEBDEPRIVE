@@ -29,7 +29,8 @@ Haz clic en el icono de la extensión para ver el contador y estas opciones:
    reproductor, igual que hace uBlock Origin. Así el anuncio ni siquiera se carga.
 2. **Saltar los que se cuelen** (`content.js`): algunos anuncios van incrustados en el
    propio vídeo (SSAP) y no se pueden quitar. Cuando el reproductor muestra un anuncio
-   (clase `ad-showing`), la extensión:
+   (clase `ad-showing` **y** la interfaz del anuncio visible, porque en YouTube Music
+   la clase puede quedarse puesta durante la canción), la extensión:
    - lo silencia y lo reproduce a 16x (no lo adelanta al final, porque eso deja el
      anuncio congelado y con los anuncios incrustados saltaría al final del vídeo);
    - pulsa "Saltar anuncio" en cuanto aparece y, si YouTube ignora el clic, hace un
@@ -37,7 +38,10 @@ Haz clic en el icono de la extensión para ver el contador y estas opciones:
    - si el anuncio termina pero se queda en pantalla, vuelve a intentar el clic real;
    - al terminar devuelve el sonido y la velocidad que tenías, también en la API del
      reproductor (`page-bridge.js`), para que YouTube Music no se quede con la
-     velocidad del anuncio y acelere la canción.
+     velocidad del anuncio y acelere la canción;
+   - fuera de un anuncio, si la canción o el vídeo va a más de 4x (velocidad que nadie
+     elige), la devuelve a la normal al instante;
+   - si un "anuncio" dura más de 20 s acelerado, entiende que no lo era y lo suelta.
 3. **Anuncios superpuestos y banners**: se cierran o se ocultan (`hide-ads.css`).
 
 Si YouTube cambia el nombre de las clases, basta con añadir el nuevo selector a
