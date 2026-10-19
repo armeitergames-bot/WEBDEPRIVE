@@ -1,4 +1,6 @@
-# ESTADIO OASIS + LA LÍNEA EN ANILLO — Centro de la Ciudad Ideal (v2)
+# ESTADIO OASIS + LA LÍNEA EN ANILLO — Centro de la Ciudad Ideal (v3)
+
+> Solo se modelan el estadio, el anillo y una explanada alrededor. La ciudad no se incluye.
 
 Un estadio para **101,384 personas** dentro de un **anillo tipo "The Line"**: una plaza
 comercial y de servicios con fachada de espejo, un cañón verde por dentro y un
@@ -33,9 +35,9 @@ comercial y de servicios con fachada de espejo, un cañón verde por dentro y un
   `02a_Modo_Futbol`, `02b_Modo_Futbol_Americano`, `02c_Modo_Rugby`,
   `02d_Modo_Concierto`, `02e_Modo_Arena_Central` (el ojito 👁 y la cámara 📷).
 - **Ver lo subterráneo (estacionamiento, jugadores):** oculta `14_Plaza_Avenida_Suelo`,
-  `13_Anillo_La_Linea` y `20_Ciudad`, y usa `CAM_Subterraneo_Rayos_X` o `CAM_Zona_Jugadores`.
-- **Cámaras:** colección `21_Camaras` → selecciona una y **Ctrl + Numpad 0**.
-- **Letreros explicativos:** colección `22_Etiquetas_Info` (salen en la vista 3D, no en el render).
+  y `13_Anillo_La_Linea`, y usa `CAM_Subterraneo_Rayos_X` o `CAM_Zona_Jugadores`.
+- **Cámaras:** colección `19_Camaras` → selecciona una y **Ctrl + Numpad 0**.
+- **Letreros explicativos:** colección `20_Etiquetas_Info` (salen en la vista 3D, no en el render).
 - El modelo está optimizado: butacas, árboles y autos son **instancias** (un solo modelo repetido),
   así el archivo pesa ~5 MB. Si aun así la vista 3D va lenta, oculta `04_Butacas_Individuales`.
 
@@ -87,8 +89,9 @@ Se necesita un Director Responsable de Obra y corresponsables certificados.
 2. **Vestíbulos altos → calle:** 8 torres de doble hélice + 16 núcleos protegidos =
    **106 m de escaleras** (≈ 8.7 min para ~72,500 personas).
 3. **Estadio → plaza interior:** 352 m de puertas en la fachada (≈ 2.6 min).
-4. **Plaza interior → ciudad:** **8 brechas de 30 m + 8 portales de 24 m** (432 m, ≈ 2.2 min).
-5. **Puntos de reunión** en el parque perimetral, frente a cada brecha (flechas verdes).
+4. **Plaza interior → explanada exterior:** **8 brechas de 30 m + 8 portales de 24 m** (432 m, ≈ 2.2 min).
+5. **Puntos de reunión** en la explanada de 30 m alrededor del anillo, frente a cada brecha
+   (flechas verdes). La explanada mide ≈ 56,000 m²: caben ≈ 112,000 personas a 0.5 m² c/u.
 
 Además: carril de bomberos en la plaza interior (rojo), las brechas sirven de acceso a
 camiones de bomberos, anillo de servicio a nivel de campo para ambulancias, centro de
@@ -159,9 +162,8 @@ aficionados y equipos, y la tienda oficial / taquillas del estadio.
 - **P1 (−6 m): 5,688 cajones** (3 % accesibles = 171; 30 % con cargador eléctrico).
 - **P2 (−12 m):** autobuses de equipos y lanzaderas accesibles, logística, bicicletas,
   centro de energía (baterías) y **cisternas de agua de lluvia (≈ 7,700 m³)**.
-- **Tranvía en anillo** con 2 estaciones, **metro subterráneo**, 4 paradas de autobús
-  eléctrico, ciclovía y cruces peatonales elevados.
-- Durante eventos la avenida se cierra a autos y queda como zona peatonal de salida.
+- Las rampas vehiculares, el transporte público y las calles quedan fuera del modelo
+  (llegan a los puntos marcados en P1/P2).
 
 ## Consumo aproximado (estimaciones de concepto)
 
@@ -170,7 +172,7 @@ aficionados y equipos, y la tienda oficial / taquillas del estadio.
 | **Electricidad** | **≈ 8.7 GWh/año** (60 eventos ≈ 50 MWh c/u + operación diaria) | **≈ 44 GWh/año** (115 kWh/m²·año) + estacionamiento ≈ 3.8 |
 | Pico de potencia | ≈ 8–10 MW en partido | ≈ 10 MW |
 | Solar en sitio | **≈ 16 GWh/año** (10.1 MWp en la cubierta) → **produce más de lo que gasta** | ≈ 4 GWh/año (pérgolas + fachada fotovoltaica) → ~9 % |
-| **Agua** | **≈ 94,000 m³/año** | **≈ 212,000 m³/año** + riego ≈ 33,000 |
+| **Agua** | **≈ 94,000 m³/año** | **≈ 212,000 m³/año** + riego ≈ 29,000 |
 | Lluvia captada | ≈ 55,000 m³/año para riego, sanitarios y la cascada | (incluida) |
 
 Para que el conjunto sea neto cero, el excedente solar del estadio (~7.5 GWh) se
@@ -185,6 +187,6 @@ Ventilación natural por el cañón, sombra propia, luz natural profunda (16 m d
 ancho por torre), fachada exterior fotovoltaica, techo verde de 4.3 ha (aísla
 y enfría), agua de lluvia y gris reciclada, geotermia/district cooling compartido
 con el estadio, madera laminada donde se pueda, vegetación nativa, y una ubicación
-céntrica con tranvía, metro y bici.
+céntrica, pensada para llegar en transporte público y bici.
 
 Es un modelo conceptual / de volumetría, no un proyecto ejecutivo.

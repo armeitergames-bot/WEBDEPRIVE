@@ -20,7 +20,7 @@ Qué genera:
     cañón verde interior, parque en la azotea, 8 brechas + 8 portales +
     16 ventanas urbanas hacia la ciudad, núcleos de circulación vertical.
   * Estacionamiento subterráneo, rutas de evacuación, puntos de reunión,
-    tranvía, metro, ciudad alrededor.
+    explanada perimetral. (La ciudad de alrededor no se modela.)
   * Dos escenas: "Dia" y "Noche" (selector de escena arriba a la derecha).
 
 Todas las medidas en metros. Al terminar, la consola imprime aforo, revisión de
@@ -61,7 +61,7 @@ RING_IN, CANYON_IN, CANYON_OUT, RING_OUT = 160.0, 176.0, 190.0, 206.0
 RING_H, FLOOR_H = 45.0, 4.5
 GAP_W, PORTAL_W, PORTAL_H = 30.0, 24.0, 13.5
 WIN_W, WIN_Z = 20.0, (22.5, 31.5)
-AVENUE_OUT, PARK_OUT = 236.0, 300.0
+EXPLANADA_OUT = 236.0                    # explanada peatonal alrededor del anillo
 MIRADOR_T = -math.pi / 4 + 0.18          # mirador del parque en la azotea
 
 TIERS = [
@@ -127,6 +127,12 @@ def d_of(x, y):
         else:
             hi = mid
     return (lo + hi) / 2
+
+
+def AREAS_ring(d0, d1):
+    """Área entre dos curvas (superelipses) en m²."""
+    k = math.gamma(1 + 1 / NEXP) ** 2 / math.gamma(1 + 2 / NEXP)
+    return 4 * k * ((A + d1) * (B + d1) - (A + d0) * (B + d0))
 
 
 def r_eff(d):
@@ -234,11 +240,7 @@ def build_materials():
         'agua': ("Agua", '#1d6f8a', 0.03, 0.1),
         'cascada': ("Cascada", '#dff4ff', 0.05, 0, 0.6, 0.6, 0.7),
         'asfalto': ("Asfalto_Permeable", '#4a4a4f', 0.85),
-        'ciclovia': ("Ciclovia", '#2e8b6a', 0.8),
-        'via_verde': ("Via_Tranvia_Verde", '#5f8f3e', 0.95),
-        'riel': ("Riel", '#8a8a8a', 0.3, 1.0),
-        'tren': ("Tranvia", '#f7f7f7', 0.3),
-        'tren_vent': ("Tranvia_Ventanas", '#1c2b36', 0.1, 0.3),
+        'tren_vent': ("Vidrio_Oscuro_Autos", '#1c2b36', 0.1, 0.3),
         'acento': ("Acento_Ambar", '#ffb100', 0.4, 0, 1.5),
         'corteza': ("Corteza", '#5b4330', 0.9),
         'texto': ("Etiqueta", '#ffffff', 0.5, 0, 2.0),
@@ -252,10 +254,7 @@ def build_materials():
         'evac': ("Ruta_Evacuacion", '#22d36b', 0.5, 0, 1.2),
         'reunion': ("Punto_Reunion", '#1fae5b', 0.6, 0, 0.6),
         'estac': ("Estacionamiento_Losa", '#8e8e8e', 0.9),
-        'bloque_1': ("Ciudad_Bloque_1", '#e8e4dc', 0.8),
-        'bloque_2': ("Ciudad_Bloque_2", '#d6d9dc', 0.8),
-        'bloque_3': ("Ciudad_Bloque_3", '#efe7d6', 0.8),
-        'calle': ("Calle_Ciudad", '#77777c', 0.9),
+        'terreno': ("Terreno_Neutro", '#d9d6cf', 0.95),
         'luz_calida': ("Luz_Ventanas_Noche", '#ffcf8a', 0.5, 0, 6.0),
         'luz_fria': ("Luz_Linea_Noche", '#bfe8ff', 0.5, 0, 5.0),
         'escenario': ("Escenario", '#2b2b30', 0.6),
@@ -1365,7 +1364,7 @@ def build_ring(M, coll, coll_night):
 
 
 # ==========================================================================
-# 7. PLAZA INTERIOR, CAÑÓN, AVENIDA, PARQUE PERIMETRAL, CIUDAD
+# 7. PLAZA INTERIOR, CAÑÓN Y EXPLANADA
 # ==========================================================================
 def in_ring_gap(t):
     for sg in STATS['anillo_segmentos']:
@@ -1434,94 +1433,15 @@ def build_ground(M, coll, coll_water):
     add_disc(bm, c, 22.0, 9.0, 0.05, 0, 48)
     finish("Estanque_Cascada", bm, [M['agua']], coll_water, recalc=False)
 
-    # avenida: banqueta | ciclovía | tranvía (vía verde) | calle | banqueta
-    bands = [(RING_OUT, 212.0, 0), (212.0, 215.0, 1), (215.0, 225.0, 2), (225.0, 233.0, 3),
-             (233.0, AVENUE_OUT, 0)]
-    bm = bmesh.new()
-    sweep(bm, lambda t: [(RING_OUT, 0.01)] + [(b[1], 0.01) for b in bands], S,
-          lambda i, j: bands[i][2], closed=False)
-    finish("Avenida_Anillo", bm, [M['plaza'], M['ciclovia'], M['via_verde'], M['asfalto']], coll, recalc=False)
+    bm = bmesh.new()   # explanada peatonal (zona de salida y puntos de reunión)
+    sweep(bm, lambda t: [(RING_OUT, 0.01), (EXPLANADA_OUT, 0.01)], S, lambda i, j: 0, closed=False)
+    finish("Explanada_Perimetral", bm, [M['plaza']], coll, recalc=False)
 
-    bm = bmesh.new()   # parque perimetral (zona de reunión)
-    sweep(bm, lambda t: [(AVENUE_OUT, 0.0), (PARK_OUT, 0.0)], S,
-          lambda i, j: 0 if not near_entry(2 * math.pi * (j + .5) / S, 268, 6.0) else 1, closed=False)
-    finish("Parque_Perimetral", bm, [M['pasto'], M['piedra']], coll, recalc=False)
-
-    bm = bmesh.new()   # calles de la ciudad
-    sweep(bm, lambda t: [(PARK_OUT, -0.02), (1500.0, -0.02)], S, lambda i, j: 0, closed=False)
-    finish("Ciudad_Calles", bm, [M['calle']], coll, recalc=False)
+    bm = bmesh.new()   # terreno neutro (la ciudad no se modela)
+    sweep(bm, lambda t: [(EXPLANADA_OUT, -0.02), (700.0, -0.02)], 96, lambda i, j: 0, closed=False)
+    finish("Terreno_Neutro", bm, [M['terreno']], coll, recalc=False)
 
 
-def build_city(M, coll, coll_veg):
-    bm = bmesh.new()
-    bm_p = bmesh.new()
-    parks = []
-    n = 0
-    for i in range(-8, 9):
-        for j in range(-8, 9):
-            cx, cy = i * 100.0, j * 100.0
-            if min(d_of(cx + sx * 38, cy + sy * 38) for sx in (-1, 1) for sy in (-1, 1)) < PARK_OUT + 8:
-                continue
-            if abs(cx) > 820 or abs(cy) > 820:
-                continue
-            if random.random() < 0.18:
-                add_box(bm_p, (cx, cy, 0.03), (76, 76, 0.06), 0)
-                parks.append((cx, cy))
-                continue
-            h = random.choice((15, 18, 24, 30, 36, 45, 60))
-            if d_of(cx, cy) > 600:
-                h = random.choice((12, 15, 18, 24))
-            for (ox, oy, w, dpt) in ((-19, 0, 36, 76), (19, -19, 36, 36)) if random.random() < 0.4 else ((0, 0, 76, 76),):
-                add_box(bm, (cx + ox, cy + oy, h / 2), (w, dpt, h), random.randint(0, 2))
-                add_box(bm, (cx + ox, cy + oy, h + 0.15), (w - 4, dpt - 4, 0.3), 3)
-            n += 1
-    finish("Ciudad_Manzanas", bm, [M['bloque_1'], M['bloque_2'], M['bloque_3'], M['parque']], coll)
-    finish("Ciudad_Parques", bm_p, [M['pasto']], coll, recalc=False)
-    STATS['ciudad_manzanas'] = n
-    return parks
-
-
-def build_mobility(M, coll):
-    bm = bmesh.new()
-    mats = [M['riel'], M['plaza'], M['tren'], M['tren_vent'], M['solar'], M['acero'],
-            M['asfalto'], M['linea'], M['bus']]
-    for dd in (216.6, 223.4):
-        for off in (-0.72, 0.72):
-            sweep(bm, lambda t, r=dd + off: [(r - 0.08, 0.02), (r + 0.08, 0.02), (r + 0.08, 0.18), (r - 0.08, 0.18)],
-                  SEG, lambda i, j: 0)
-    for tc in (math.pi / 2, -math.pi / 2):                     # estaciones de tranvía (andén isla)
-        h = dt_w(70, tc, 220) / 2
-        arc_block(bm, tc - h, tc + h, 218.2, 221.8, 0.0, 0.35, (1,) * 6)
-        arc_block(bm, tc - h, tc + h, 218.0, 222.0, 4.2, 4.5, (4,) * 6)
-        for f in (-0.8, -0.4, 0, 0.4, 0.8):
-            add_rbox(bm, tc + h * f, 220.0, 0.35, 0.3, 0.3, 3.9, 5)
-    for tc, dd in ((0.9, 216.6), (2.6, 223.4), (4.2, 216.6), (5.6, 223.4)):   # tranvías
-        n, tan = outward(tc, dd)
-        add_obox(bm, P(tc, dd, 1.9), tan, n, Vector((0, 0, 1)), 20.0, 1.33, 1.6, 2)
-        add_obox(bm, P(tc, dd, 2.3), tan, n, Vector((0, 0, 1)), 20.05, 1.36, 0.55, 3)
-    for e in ENTRIES:                                            # cruces peatonales elevados
-        for s in range(-6, 7):
-            n, tan = outward(e, 229)
-            add_obox(bm, P(e, 229, 0.06) + tan * (s * 1.6), n, tan, Vector((0, 0, 1)), 4.0, 0.4, 0.04, 7)
-    for tc in (0.0, math.pi / 2, math.pi, -math.pi / 2):        # paradas de autobús eléctrico
-        tt = tc + 0.12
-        add_rbox(bm, tt, 234.5, 2.8, 14.0, 3.0, 0.2, 4)
-        add_rbox(bm, tt, 231.0, 0.0, 12.0, 2.6, 3.2, 8)
-    # rampas vehiculares al estacionamiento (autos a P1, autobuses/servicio a P2)
-    for tc, d_top, z_bot in ((0.0, 300.0, Z_P1), (math.pi, 300.0, Z_P1), (math.pi / 2, 330.0, Z_P2),
-                             (-math.pi / 2, 300.0, Z_P1)):
-        n, tan = outward(tc, RING_OUT)
-        a = P(tc, d_top, 0.0)
-        b = P(tc, RING_OUT, z_bot)
-        ax = (b - a).normalized()
-        az = ax.cross(tan)
-        if az.z < 0:
-            az = -az
-        add_obox(bm, (a + b) / 2, ax, tan, az, (b - a).length / 2, 4.5, 0.2, 6)
-        add_obox(bm, a + Vector((0, 0, 4.5)) + ax * 2, ax, tan, Vector((0, 0, 1)), 2.0, 5.5, 0.6, 5)
-    finish("Movilidad_Tranvia_Bus_Rampas", bm, mats, coll)
-    STATS['rampa_auto'] = 100 * abs(Z_P1) / (300.0 - RING_OUT)
-    STATS['rampa_bus'] = 100 * abs(Z_P2) / (330.0 - RING_OUT)
 
 
 def build_underground(M, coll, coll_src):
@@ -1546,7 +1466,7 @@ def build_underground(M, coll, coll_src):
     for d in rows:
         pts, _ = walk_points(d, 2.5, 2400)
         for (t, x, y, nx, ny) in pts:
-            if any(ang_dist(t, a) * r_eff(d) < 9 for a in (0.0, math.pi, math.pi / 2, -math.pi / 2)):
+            if any(ang_dist(t, a) * r_eff(d) < 9 for a in (0.0, math.pi, math.pi / 2, -math.pi / 2)):   # llegada de rampas
                 continue
             stalls += 1
             if random.random() < 0.55:
@@ -1558,7 +1478,7 @@ def build_underground(M, coll, coll_src):
     STATS['cajones'] = stalls
     STATS['cajones_accesibles'] = int(math.ceil(stalls * 0.03))
 
-    bm = bmesh.new()   # P2: cisternas, centro de energía, autobuses, bicis, metro
+    bm = bmesh.new()   # P2: cisternas, centro de energía, autobuses, bicis
     for k in range(10):
         t = -math.pi / 2 - 0.35 + k * 0.07
         c = P(t, 150.0, 0)
@@ -1572,8 +1492,6 @@ def build_underground(M, coll, coll_src):
         add_rbox(bm, math.pi / 2 - 0.25 + k * 0.05, 120.0, Z_P2, 3.0, 12.5, 3.4, 2)
     for k in range(14):
         add_rbox(bm, math.pi + 0.3 + k * 0.03, 140.0, Z_P2, 8.0, 20.0, 1.2, 3)
-    add_box(bm, (0, B + 262, -21), (150, 24, 8), 4)              # estación de metro
-    add_box(bm, (0, B + 228, -14), (10, 50, 4), 4)
     finish("Subterraneo_Servicios", bm, [M['cisterna'], M['energia'], M['bus'], M['acero'], M['tunel']], coll)
     STATS['cisternas_m3'] = 10 * math.pi * 7.0 ** 2 * 5.0
 
@@ -1596,13 +1514,13 @@ def build_evacuation(M, coll):
     bm = bmesh.new()
     for e in ENTRIES:                       # plaza interior -> brecha -> punto de reunión
         d = 116.0
-        while d < 262.0:
+        while d < EXPLANADA_OUT - 12:
             chevron(bm, e, d, 0.08 if d < RING_OUT else 0.1, 0)
             d += 9.0
     for k in range(8):                      # portales
         t = math.pi / 4 * k
         d = 116.0
-        while d < 262.0:
+        while d < EXPLANADA_OUT - 12:
             chevron(bm, t, d, 0.08, 0, 1.8)
             d += 11.0
     for t in ENTRIES + CORES:               # vestíbulo L0 hacia puertas
@@ -1617,16 +1535,16 @@ def build_evacuation(M, coll):
                     continue
                 chevron(bm, e, d, z + 0.05, 0, 1.6)
     for e in ENTRIES:                       # puntos de reunión
-        c = se(e, 268.0)
-        add_ring(bm, c, 16.0, 17.5, 0.06, 1, 48)
+        c = se(e, EXPLANADA_OUT - 7)
+        add_ring(bm, c, 5.5, 6.5, 0.06, 1, 40)
     finish("Rutas_Evacuacion_y_Puntos_Reunion", bm, [M['evac'], M['reunion']], coll, recalc=False)
-    STATS['puntos_reunion_m2'] = 8 * math.pi * 16.0 ** 2
+    STATS['explanada_m2'] = AREAS_ring(RING_OUT, EXPLANADA_OUT)
 
 
 # ==========================================================================
 # 9. VEGETACIÓN
 # ==========================================================================
-def build_vegetation(M, coll, parks, coll_src):
+def build_vegetation(M, coll, coll_src):
     """Árboles como instancias de 11 modelos (con giro y escala al azar): pesa ~1 % que antes."""
     buckets = {}
     count = 0
@@ -1668,18 +1586,6 @@ def build_vegetation(M, coll, parks, coll_src):
             if math.dist((x, y), se(0.95, 183)) < 45:
                 continue
             tree(x, y, 0.0, 'copa', 0.7)
-            count += 1
-    for _ in range(1300):                   # parque perimetral
-        t = random.uniform(0, 2 * math.pi)
-        d = random.uniform(AVENUE_OUT + 4, PARK_OUT - 4)
-        if near_entry(t, 268.0, 22.0):
-            continue
-        x, y = se(t, d)
-        tree(x, y, 0.0, random.choice(('copa', 'copa', 'copa', 'cipres')))
-        count += 1
-    for (cx, cy) in parks:
-        for _ in range(14):
-            tree(cx + random.uniform(-34, 34), cy + random.uniform(-34, 34), 0.0, 'copa')
             count += 1
     for key, rows in sorted(buckets.items()):
         if key == 'cipres':
@@ -1917,8 +1823,8 @@ def checks_and_consumption(tiers):
                  f"G3 {e3:.1f} min por {n_vom} vomitorios ({w3:.0f} m)  [meta ≤ 8 min]")
     lines.append(f"  bajada a nivel plaza: {up:,} personas por {stairs_w:.0f} m de escaleras = {e_down:.1f} min")
     lines.append(f"  puertas fachada ({doors:.0f} m): {e_doors:.1f} min | brechas+portales del anillo "
-                 f"({openings:.0f} m): {e_ring:.1f} min | puntos de reunión {S['puntos_reunion_m2']:,.0f} m² "
-                 f"+ parque perimetral")
+                 f"({openings:.0f} m): {e_ring:.1f} min | explanada de reunión {S['explanada_m2']:,.0f} m² "
+                 f"(≈ {S['explanada_m2'] / 0.5:,.0f} personas a 0.5 m²)")
 
     # consumo (estimado)
     gfa = S['anillo_gfa']
@@ -1932,7 +1838,7 @@ def checks_and_consumption(tiers):
     parking = (S['cajones'] * 28 * 2) * 12 / 1e6
     water_stadium = EVENTS_PER_YEAR * 1100 + 16000 + 12000
     water_ring = gfa * 0.55
-    green = AREAS.get('azotea', 0) + 52000
+    green = AREAS.get('azotea', 0) + 40000          # azotea + jardines de la plaza interior
     water_parks = green * 0.35
     roof_catch = (S['cubierta_etfe'] + S['cubierta_pv'] + AREAS.get('azotea', 0) * 0.3) * RAIN_M * 0.8
     S['consumo'] = dict(stadium=stadium, ring=ring, parking=parking, gen_stadium=gen_stadium,
@@ -1941,8 +1847,7 @@ def checks_and_consumption(tiers):
                         water_parks=water_parks, rain=roof_catch, gfa=gfa)
     lines.append(f"ANILLO: {gfa:,.0f} m² construidos | {S['anillo_nucleos']} núcleos de circulación | "
                  f"azotea-parque {AREAS.get('azotea', 0):,.0f} m²")
-    lines.append(f"ESTACIONAMIENTO: {S['cajones']:,} cajones (P1) | rampa autos {S['rampa_auto']:.1f} % | "
-                 f"rampa autobuses {S['rampa_bus']:.1f} %")
+    lines.append(f"ESTACIONAMIENTO: {S['cajones']:,} cajones (P1) + autobuses, bicis y servicios (P2)")
     lines.append(f"ENERGÍA estadio ≈ {stadium:.1f} GWh/año vs solar cubierta {gen_stadium:.1f} GWh/año "
                  f"({pv_roof_kwp / 1000:.1f} MWp)")
     lines.append(f"ENERGÍA anillo ≈ {ring:.1f} GWh/año (+ estac. {parking:.1f}) vs solar pérgolas+fachada "
@@ -1967,12 +1872,12 @@ def main():
         ('ret', "10_Techo_Retractil_(animado)"), ('arb', "11_Arboles_Estructurales"),
         ('fach', "12_Fachada_y_Accesos"), ('anillo', "13_Anillo_La_Linea"),
         ('suelo', "14_Plaza_Avenida_Suelo"), ('agua', "15_Agua"), ('sub', "16_Subterraneo_Estacionamiento"),
-        ('evac', "17_Evacuacion"), ('mov', "18_Movilidad"), ('veg', "19_Vegetacion"),
-        ('ciudad', "20_Ciudad"), ('cams', "21_Camaras"), ('etq', "22_Etiquetas_Info"),
+        ('evac', "17_Evacuacion"), ('veg', "18_Vegetacion"),
+        ('cams', "19_Camaras"), ('etq', "20_Etiquetas_Info"),
         ('src', "00_Fuentes_Instancias"),
     ]
     C = {k: new_coll(v) for k, v in names}
-    coll_night = bpy.data.collections.new("23_Luces_Noche")
+    coll_night = bpy.data.collections.new("21_Luces_Noche")
 
     build_field(M, C['campo'])
     mode_colls = dict(futbol=C['modo_f'], americano=C['modo_a'], rugby=C['modo_r'],
@@ -1990,11 +1895,9 @@ def main():
     build_facade(M, C['fach'])
     build_ring(M, C['anillo'], coll_night)
     build_ground(M, C['suelo'], C['agua'])
-    parks = build_city(M, C['ciudad'], C['veg'])
-    build_mobility(M, C['mov'])
     build_underground(M, C['sub'], C['src'])
     build_evacuation(M, C['evac'])
-    build_vegetation(M, C['veg'], parks, C['src'])
+    build_vegetation(M, C['veg'], C['src'])
     report = checks_and_consumption(tiers)
 
     for key in ('modo_a', 'modo_r', 'modo_c', 'modo_ar'):
@@ -2031,12 +1934,10 @@ def main():
         ("Portal peatonal 24 m", (*se(math.pi * 5 / 4, 183), 18), 5),
         ("Ventana urbana (vista al estadio)", (*se(math.pi * 5 / 4 - 0.22, 183), 36), 4),
         ("Cascada + estanque (enfría y enmascara ruido)", (*se(S['cascada_t'], 150), 20), 5),
-        ("Punto de reunión", (*se(ENTRIES[4], 268), 10), 5),
+        ("Punto de reunión (explanada)", (*se(ENTRIES[4], EXPLANADA_OUT - 7), 10), 5),
         ("Carril de bomberos", (*se(1.0, 143), 6), 4),
-        ("Tranvía en anillo + estación", (*se(math.pi / 2, 220), 12), 5),
         (f"Estacionamiento P1 {S['cajones']:,} cajones (-6 m)", (*se(math.pi + 0.4, 150), -2), 6),
         ("P2 (-12 m): autobuses, bicis, energía, cisternas", (*se(-math.pi / 2, 150), -8), 6),
-        ("Estación de metro", (0, B + 262, -14), 6),
     ]
     for name, loc in player_labels:
         L.append((name, loc, 2.2))
@@ -2066,7 +1967,7 @@ def main():
     print("ESTADIO OASIS + LA LÍNEA EN ANILLO — generado")
     for ln in report:
         print(ln)
-    print(f"Árboles: {S['arboles']:,} | Manzanas de ciudad: {S['ciudad_manzanas']} | "
+    print(f"Árboles: {S['arboles']:,} | "
           f"Módulos de servicio: {S['modulos']}")
     print("=" * 78)
 
