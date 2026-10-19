@@ -254,7 +254,7 @@ def build_materials():
         'evac': ("Ruta_Evacuacion", '#22d36b', 0.5, 0, 1.2),
         'reunion': ("Punto_Reunion", '#1fae5b', 0.6, 0, 0.6),
         'estac': ("Estacionamiento_Losa", '#8e8e8e', 0.9),
-        'terreno': ("Terreno_Neutro", '#d9d6cf', 0.95),
+        'terreno': ("Terreno_Neutro", '#c9c5ba', 0.95),
         'luz_calida': ("Luz_Ventanas_Noche", '#ffcf8a', 0.5, 0, 6.0),
         'luz_fria': ("Luz_Linea_Noche", '#bfe8ff', 0.5, 0, 5.0),
         'escenario': ("Escenario", '#2b2b30', 0.6),
@@ -1438,7 +1438,7 @@ def build_ground(M, coll, coll_water):
     finish("Explanada_Perimetral", bm, [M['plaza']], coll, recalc=False)
 
     bm = bmesh.new()   # terreno neutro (la ciudad no se modela)
-    sweep(bm, lambda t: [(EXPLANADA_OUT, -0.02), (700.0, -0.02)], 96, lambda i, j: 0, closed=False)
+    sweep(bm, lambda t: [(EXPLANADA_OUT, -0.02), (3000.0, -0.02)], 96, lambda i, j: 0, closed=False)
     finish("Terreno_Neutro", bm, [M['terreno']], coll, recalc=False)
 
 
