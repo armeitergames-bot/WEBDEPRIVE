@@ -27,6 +27,20 @@ Solo se modelan el estadio, la plaza en anillo y una explanada alrededor. La ciu
 | `estadio_yaxche.blend` | El modelo listo (Blender 4.2 o más nuevo). |
 | `estadio_yaxche.py` | El script que lo genera todo (modificable). |
 | `previews/` | Renders de las cámaras incluidas. |
+| `Presupuesto_Materiales_Yaxche_Sakbe.xlsx` | Presupuesto paramétrico (209 partidas) y lista de 152 materiales e insumos. |
+| `Recorrido_Estadio_Yaxche_Plaza_Sakbe.mp4` | Video del recorrido (48 s, 10 tomas). |
+
+## Costo de construcción (estimado de concepto ±25 %)
+
+| | MXN |
+|---|---|
+| Costo directo | 37,235 millones |
+| Indirectos, utilidad, proyecto, licencias y supervisión | 11,170 millones |
+| Contingencia (10 %) | 4,840 millones |
+| **Total sin IVA** | **53,245 millones** |
+| **Total con IVA** | **61,765 millones (≈ USD 3,340 millones)** |
+
+Sin terreno. El desglose, los supuestos editables y la lista completa de materiales están en el Excel.
 
 ## Medidas (largo × ancho)
 
