@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-ESTADIO OASIS + ANILLO "LA LÍNEA"  —  Centro de la Ciudad Ideal  (versión 2)
+ESTADIO YAXCHÉ + PLAZA SAKBÉ  —  Centro de la Ciudad Ideal  (versión 3)
+Yaxché = la ceiba sagrada maya (raíces, tronco y copa: los tres niveles del mundo).
+Sakbé  = "camino blanco" maya: el anillo es un camino-parque elevado alrededor del estadio.
 ===========================================================================
 Generador procedural para Blender (probado en Blender 4.2 LTS y 5.1).
 
@@ -16,7 +18,7 @@ Qué genera:
     escape, zona de jugadores, techo retráctil animado (frame 1 abierto,
     frame 120 cerrado) y modos: fútbol, fútbol americano, rugby, concierto y
     arena central.
-  * "La Línea" en anillo: plaza comercial y de servicios con espejo exterior,
+  * Plaza Sakbé (anillo estilo "The Line"): plaza comercial y de servicios con espejo exterior,
     cañón verde interior, parque en la azotea, 8 brechas + 8 portales +
     16 ventanas urbanas hacia la ciudad, núcleos de circulación vertical.
   * Estacionamiento subterráneo, rutas de evacuación, puntos de reunión,
@@ -54,9 +56,10 @@ TOWER_D, TOWER_R = 108.5, 8.0
 ROOF_IN, ROOF_OUT, ROOF_Z = 12.0, 114.0, 63.0
 N_TREES = 24
 ENTRIES = [math.pi / 8 + k * math.pi / 4 for k in range(8)]
-CORES = [math.radians(11.25 + 22.5 * k) for k in range(16)]
+CORES = [math.radians(a + 45 * k) for k in range(8) for a in (10, 40)]   # entre vomitorios y accesos
+VOMS = [math.radians(2.5 + 15 * k) for k in range(24)]                   # centros de los vomitorios
 
-# Anillo "La Línea"
+# Plaza Sakbé (anillo estilo "The Line")
 RING_IN, CANYON_IN, CANYON_OUT, RING_OUT = 160.0, 176.0, 190.0, 206.0
 RING_H, FLOOR_H = 45.0, 4.5
 GAP_W, PORTAL_W, PORTAL_H = 30.0, 24.0, 13.5
@@ -71,7 +74,7 @@ TIERS = [
          under="raked", front_drop=3.0, acc="back"),
     dict(name="Grada_3_Alta", z0=27.5, rows=32, aisle=6, led=True,
          under="raked", front_drop=3.5, acc="mid", mid_row=9,
-         vom=dict(every=18, segs=(1, 2), rows=range(10, 16))),
+         vom=dict(every=18, segs=(1, 2, 3, 4), flat=(2, 3, 4), rows=range(10, 16))),
 ]
 
 # supuestos de consumo (ajústalos)
@@ -176,7 +179,7 @@ def hexc(h):
     return tuple(c / 12.92 if c <= 0.04045 else ((c + 0.055) / 1.055) ** 2.4 for c in srgb)
 
 
-def make_mat(name, hx, rough=0.5, metal=0.0, emit=0.0, trans=0.0, alpha=1.0):
+def make_mat(name, hx, rough=0.5, metal=0.0, emit=0.0, trans=0.0, alpha=1.0, ior=1.45):
     color = hexc(hx)
     m = bpy.data.materials.new(name)
     try:
@@ -198,7 +201,7 @@ def make_mat(name, hx, rough=0.5, metal=0.0, emit=0.0, trans=0.0, alpha=1.0):
     _set(bsdf, ["Metallic"], metal)
     if trans:
         _set(bsdf, ["Transmission Weight", "Transmission"], trans)
-        _set(bsdf, ["IOR"], 1.45)
+        _set(bsdf, ["IOR"], ior)
     if alpha < 1.0:
         _set(bsdf, ["Alpha"], alpha)
     if emit:
@@ -213,6 +216,7 @@ def build_materials():
         'grada': ("Grada_Concreto", '#9d978c', 0.85),
         'pasillo': ("Pasillo_Escalera", '#e6e1d6', 0.7),
         'vomitorio': ("Vomitorio_Sombra", '#1d1d22', 0.9),
+        'hueco': ("Hueco_Abierto", '#000000', 0.5, 0, 0, 0, 0.0),
         'led': ("LED_Cinta", '#3ef0c8', 0.3, 0, 3.0),
         'accesible': ("Plataforma_Accesible", '#2a6fdb', 0.5),
         'vidrio': ("Vidrio_Fachada", '#9fd3e0', 0.05, 0, 0, 1.0, 0.35),
@@ -244,7 +248,9 @@ def build_materials():
         'acento': ("Acento_Ambar", '#ffb100', 0.4, 0, 1.5),
         'corteza': ("Corteza", '#5b4330', 0.9),
         'texto': ("Etiqueta", '#ffffff', 0.5, 0, 2.0),
-        'espejo': ("Espejo_Fachada_Linea", '#d9e4ec', 0.03, 1.0),
+        'espejo': ("Vidrio_Espejo_Sakbe", '#c9d6de', 0.02, 0.6, 0, 0.45, 1.0, 1.8),
+        'losa': ("Losa_Piso_Interior", '#d8d2c6', 0.7),
+        'luz_int': ("Luz_Interior", '#fff1d6', 0.5, 0, 8.0),
         'vidrio_canon': ("Vidrio_Canon_Calido", '#efe2cc', 0.12, 0.25),
         'parque': ("Parque_Azotea", '#5f9a3c', 0.95),
         'sofito': ("Sofito_Madera", '#a9744a', 0.7),
@@ -278,12 +284,21 @@ def build_materials():
     for k, v in D.items():
         name, hx = v[0], v[1]
         rest = list(v[2:])
-        keys = ['rough', 'metal', 'emit', 'trans', 'alpha']
+        keys = ['rough', 'metal', 'emit', 'trans', 'alpha', 'ior']
         M[k] = make_mat(name, hx, **dict(zip(keys, rest)))
     seat_hex = ['#1f4d2c', '#2f7d3a', '#5f9e3d', '#2a9d8f', '#d9b26f', '#efcf7a']
     M['butacas'] = [make_mat(f"Butaca_{i}", h, 0.45) for i, h in enumerate(seat_hex)]
     M['hoja'] = [make_mat(f"Follaje_{i}", h, 0.9)
                  for i, h in enumerate(['#2f6b2f', '#4f8a35', '#6f9f3f', '#8f6fc7', '#3b7d4a'])]
+    M['tiendas'] = [make_mat(f"Tienda_{i}", h, 0.6) for i, h in enumerate(
+        ['#c98b6b', '#d8c3a5', '#8fa9a3', '#a7b59a', '#b9a2a8', '#e3d5c3'])]
+    M['programa'] = {
+        'comida': [make_mat("Restaurante_A", '#c07a4f', 0.6), make_mat("Restaurante_B", '#9c6b4e', 0.6)],
+        'cine': [make_mat("Cine_Sala", '#4a3d5c', 0.7)],
+        'deporte': [make_mat("Gimnasio_Centro_Deportivo", '#6f9c95', 0.6)],
+        'salud': [make_mat("Clinica_Guarderia", '#f4f1ea', 0.6), make_mat("Museo_del_Deporte", '#c9a227', 0.6)],
+        'oficina': [make_mat("Oficinas_Coworking", '#e8ecef', 0.6), make_mat("Coworking_Madera", '#c49a6c', 0.6)],
+    }
     M['autos'] = [make_mat(f"Auto_{i}", h, 0.3, 0.5)
                   for i, h in enumerate(['#e9e9e9', '#2b2b2b', '#9aa3ad', '#b53a2e', '#2f5f9e'])]
     return M
@@ -338,7 +353,7 @@ def sweep(bm, prof_fn, seg, mat_fn, closed=True, t0=0.0, t1=None):
 def arc_block(bm, t0, t1, d0, d1, z0, z1, mats, tally=None, n=None):
     """Bloque sólido que sigue la curva: mats = (abajo, exterior, arriba, interior, tapa0, tapa1)."""
     if n is None:
-        n = max(1, int(arc_len(t0, t1, (d0 + d1) / 2, 12) / 4.0) + 1)
+        n = max(1, int(arc_len(t0, t1, (d0 + d1) / 2, 12) / 6.0) + 1)
     prof = [(d0, z0), (d1, z0), (d1, z1), (d0, z1)]
     rings = []
     for j in range(n + 1):
@@ -526,8 +541,9 @@ def design_tier(spec, d0, z0):
     return info
 
 
-def tier_profile(info):
-    Pp, K = [], []
+def tier_profile(info, hole=None):
+    """Perfil (d, z) de la grada; idx[i] = (punto de huella, punto de contrahuella) del escalón i."""
+    Pp, K, idx = [], [], {}
 
     def add(d, z, k):
         Pp.append((d, z))
@@ -539,15 +555,23 @@ def tier_profile(info):
     add(d0 + 0.3, z0 + 1.1, 'pin')
     st = info['steps']
     for i, s in enumerate(st):
+        ti = len(Pp)
         add(s['d'], s['z'], ('tread', i) if s['kind'] == 'seat' else 'acc')
+        ri = None
         if i < len(st) - 1:
+            ri = len(Pp)
             add(s['d'] + s['w'], s['z'], ('riser', i + 1))
+        idx[i] = (ti, ri)
     d_end, z_end = info['back'] - 0.3, info['z_top']
     add(d_end, z_end, 'back')
     add(d_end, z_end + 1.2, 'btop')
     add(d_end + 0.3, z_end + 1.2, 'bout')
     add(d_end + 0.3, info['zb'], 'soffit')
-    return Pp, K
+    if hole:                                   # (d_exit, d_land): tramo de losa que se abre en los vomitorios
+        ua = info['under_at']
+        add(hole[1], ua(hole[1]), 'soffit_hole')
+        add(hole[0], ua(hole[0]), 'soffit')
+    return Pp, K, idx
 
 
 def seat_color(tier, row, rows, j):
@@ -590,8 +614,8 @@ def walk_points(d, spacing, n_samp=SEG * 8):
 
 def build_stands(M, coll):
     mats = ([M['grada']] + M['butacas'] +
-            [M['pasillo'], M['led'], M['accesible'], M['vomitorio'], M['concreto']])
-    I_AISLE, I_LED, I_ACC, I_VOM, I_CON = 7, 8, 9, 10, 11
+            [M['pasillo'], M['led'], M['accesible'], M['vomitorio'], M['concreto'], M['hueco']])
+    I_AISLE, I_LED, I_ACC, I_VOM, I_CON, I_HOLE = 7, 8, 9, 10, 11, 12
     tiers = []
     d0 = 8.0
     for ti, spec in enumerate(TIERS):
@@ -603,18 +627,60 @@ def build_stands(M, coll):
             z0 = max(z0, tiers[1]['z_top'] + 8.5)
         info = design_tier(spec, d0, z0)
         tiers.append(info)
-        Pp, K = tier_profile(info)
+        vom = spec.get('vom')
+        hole = None
+        if vom:
+            acc = next(s for s in info['steps'] if s['kind'] == 'acc')
+            d_s, z_p = acc['d'] + acc['w'], acc['z']
+            slope = math.tan(math.radians(33))
+            d_land = d_s + (z_p - Z_L2) / slope
+            d_exit = d_s
+            while z_p - slope * (d_exit - d_s) > info['under_at'](d_exit):
+                d_exit += 0.05                     # donde la escalera atraviesa la losa
+            hole = (d_exit, d_land)
+            info['vom_stair'] = (d_s, z_p, slope)
+            STATS['vom_stair'] = (d_s, z_p, slope, d_exit, d_land)
+        Pp, K, idx = tier_profile(info, hole)
         steps = info['steps']
         blocked = blocked_fn(spec)
         rows = spec['rows']
         pattern = {}
+        prof_v = None
+        if vom:
+            # vomitorio: zanja con escalera que baja del pasillo transversal, cruza la losa y llega a L2
+            ua = info['under_at']
+            prof_v = list(Pp)
+            for i, s in enumerate(steps):
+                if s['kind'] == 'seat' and s['row'] in vom['rows']:
+                    for pi in idx[i]:
+                        if pi is not None:
+                            dd = Pp[pi][0]
+                            prof_v[pi] = (dd, max(z_p - slope * (dd - d_s), ua(dd)))
+        last_vom = max(vom['rows']) + 1 if vom else None
 
-        def mat_fn(i, j, K=K, steps=steps, blocked=blocked, spec=spec, ti=ti, rows=rows, pattern=pattern):
+        def prof(t, Pp=Pp, prof_v=prof_v, vom=vom):
+            if prof_v is None:
+                return Pp
+            j = int(round(t / (2 * math.pi) * SEG)) % SEG
+            return prof_v if (j % vom['every']) in vom['flat'] else Pp
+
+        def mat_fn(i, j, K=K, steps=steps, blocked=blocked, spec=spec, ti=ti, rows=rows, pattern=pattern,
+                   vom=vom, last_vom=last_vom, hole=hole):
             k = K[i]
+            jv = (j % SEG) % vom['every'] if vom else -1
+            if k == 'soffit_hole':
+                return I_HOLE if (vom and jv in vom['flat'][:-1]) else I_CON
             if isinstance(k, tuple):
                 s = steps[k[1]]
                 if s['kind'] != 'seat':
                     return I_CON
+                if vom and jv in vom['segs']:
+                    if s['row'] in vom['rows']:
+                        if jv in vom['flat'][:-1]:
+                            return I_HOLE if s['d'] >= hole[0] else I_AISLE
+                        return I_VOM
+                    if s['row'] == last_vom and k[0] == 'riser':
+                        return I_VOM
                 if blocked(j, s['row']):
                     return I_VOM if (j % spec['aisle']) else I_AISLE
                 if k[0] == 'tread':
@@ -630,9 +696,29 @@ def build_stands(M, coll):
             return I_CON
 
         bm = bmesh.new()
-        sweep(bm, lambda t, Pp=Pp: Pp, SEG, mat_fn)
+        sweep(bm, prof, SEG, mat_fn)
         finish(spec['name'], bm, mats, coll)
         info['pattern'] = pattern
+        if vom:                                          # escaleras de los vomitorios hasta L2
+            bm = bmesh.new()
+            d_s, z_p, slope = info['vom_stair']
+            d_land = d_s + (z_p - Z_L2) / slope
+            for k in range(SEG // vom['every']):
+                jc = k * vom['every'] + vom['flat'][1]
+                t = 2 * math.pi * jc / SEG
+                n, tan = outward(t, (d_s + d_land) / 2)
+                a, b = P(t, d_s, z_p), P(t, d_land, Z_L2)
+                ax = (b - a).normalized()
+                az = ax.cross(tan)
+                if az.z < 0:
+                    az = -az
+                hw = perim((d_s + d_land) / 2, 360) / SEG
+                add_obox(bm, (a + b) / 2 - az * 0.2, ax, tan, az, (b - a).length / 2, hw, 0.2, 0)
+                for sgn in (-1, 1):
+                    add_obox(bm, (a + b) / 2 + tan * (sgn * hw) + az * 0.55, ax, tan, az,
+                             (b - a).length / 2, 0.08, 0.55, 1)
+            finish("Vomitorios_Escaleras_a_L2", bm, [M['pasillo'], M['acero']], coll)
+            STATS['vom_land'] = d_land
     return tiers
 
 
@@ -779,11 +865,28 @@ def build_concourses(M, tiers, coll):
               ("Vestibulo_L05_Mezzanine", t2['back'] + 1.0, Z_L05),
               ("Vestibulo_L1_Medio", t2['back'], z_l1),
               ("Vestibulo_L2_Alto", d_l2, Z_L2)]
+    flights = [(Z_L0, Z_L05, 1), (Z_L05, z_l1, -1), (z_l1, Z_L2, 1)]
+    STATS['flights'] = flights
+    bm_r = bmesh.new()
     for name, din, z in floors:
+        voids = []
+        for (za, zb, side) in flights:
+            if abs(zb - z) < 1e-6:                     # la escalera que llega a este piso lo atraviesa
+                run = (zb - za) / math.tan(math.radians(30))
+                for e in ENTRIES:
+                    sp = speed(e, 89.2)
+                    voids.append(tuple(sorted((e + side * 5.0 / sp, e + side * (7.0 + run) / sp))))
         bm = bmesh.new()
-        sweep(bm, lambda t, din=din, z=z: [(din, z - 0.45), (FACADE_D - 0.2, z - 0.45),
-                                           (FACADE_D - 0.2, z), (din, z)], SEG, lambda i, j: 0)
+        ring_floor(bm, din, z, voids)
         finish(name, bm, [M['plaza']], coll)
+        for (a, b) in voids:                           # barandal de vidrio alrededor del hueco
+            for dd in (VOID_D[0], VOID_D[1]):
+                arc_block(bm_r, a, b, dd - 0.03, dd + 0.03, z, z + 1.1, (0,) * 6)
+            for tt in (a, b):
+                n, tan = outward(tt, 89.5)
+                add_obox(bm_r, P(tt, 89.5, z + 0.55), n, tan, Vector((0, 0, 1)),
+                         (VOID_D[1] - VOID_D[0]) / 2, 0.03, 0.55, 0)
+    finish("Barandales_Huecos_Escaleras", bm_r, [M['vidrio']], coll)
 
     bm = bmesh.new()   # luminarias lineales bajo cada losa y bajo las gradas
     for din, z in ((t2['back'] + 2.0, Z_L05 - 0.5), (t2['back'] + 2.0, z_l1 - 0.5), (d_l2 + 1.0, Z_L2 - 0.5)):
@@ -812,30 +915,99 @@ def build_concourses(M, tiers, coll):
     finish("Columnas", bm, [M['acero']], coll, smooth=True)
 
 
+VOID_D = (85.5, 93.5)
+
+
+def ring_floor(bm, din, z, voids, dout=FACADE_D - 0.2):
+    """Losa anular; deja huecos (voids = tramos de t) en la franja VOID_D."""
+    def prof(a, b):
+        return lambda t: [(a, z - 0.45), (b, z - 0.45), (b, z), (a, z)]
+    if not voids:
+        sweep(bm, prof(din, dout), SEG, lambda i, j: 0)
+        return
+    sweep(bm, prof(din, VOID_D[0]), SEG, lambda i, j: 0)
+    sweep(bm, prof(VOID_D[1], dout), SEG, lambda i, j: 0)
+    voids = sorted(voids)
+    for i, (a, b) in enumerate(voids):
+        na = voids[(i + 1) % len(voids)][0] + (2 * math.pi if i == len(voids) - 1 else 0)
+        arc_block(bm, b, na, VOID_D[0], VOID_D[1], z - 0.45, z, (0,) * 6)
+
+
+def add_tube(bm, c, r, z0, z1, holes, mat, segs=48):
+    """Cilindro (vidrio) con vanos de puerta: holes = [(ángulo, medio_ancho_rad, z_a, z_b)]."""
+    for k in range(segs):
+        a0, a1 = 2 * math.pi * k / segs, 2 * math.pi * (k + 1) / segs
+        am = (a0 + a1) / 2
+        cuts = sorted((za, zb) for (ac, hw, za, zb) in holes if ang_dist(am, ac) < hw)
+        zc = z0
+        for (za, zb) in cuts + [(z1, z1)]:
+            if za > zc + 1e-6:
+                v = [bm.verts.new((c[0] + r * math.cos(a), c[1] + r * math.sin(a), zz))
+                     for a, zz in ((a0, zc), (a1, zc), (a1, za), (a0, za))]
+                bm.faces.new(v).material_index = mat
+            zc = max(zc, zb)
+
+
+def add_arc_slab(bm, c, r0, r1, z, a0, a1, mat, thick=0.35):
+    """Losa en forma de sector de anillo (descansos de las torres)."""
+    segs = max(2, int((a1 - a0) / 0.12))
+    rings = []
+    for k in range(segs + 1):
+        a = a0 + (a1 - a0) * k / segs
+        ca, sa = math.cos(a), math.sin(a)
+        rings.append([bm.verts.new((c[0] + r * ca, c[1] + r * sa, z + dz))
+                      for r, dz in ((r0, 0), (r1, 0), (r1, -thick), (r0, -thick))])
+    for k in range(segs):
+        for i in range(4):
+            bm.faces.new((rings[k][i], rings[k + 1][i], rings[k + 1][(i + 1) % 4],
+                          rings[k][(i + 1) % 4])).material_index = mat
+    bm.faces.new(list(reversed(rings[0]))).material_index = mat
+    bm.faces.new(rings[-1]).material_index = mat
+
+
 def build_vertical_circulation(M, tiers, coll):
     z_l1 = STATS['Z_L1']
     # (a) 8 torres de doble hélice en los accesos
     bm_g, bm_s, bm_c = bmesh.new(), bmesh.new(), bmesh.new()
+    TURNS = 1.62
+    levels = (Z_L05, z_l1, Z_L2)
     for e in ENTRIES:
         c = P(e, TOWER_D, 0)
-        add_cyl(bm_g, (c.x, c.y, Z_L0), (c.x, c.y, Z_L2 + 7), TOWER_R, TOWER_R, 0, sides=32, caps=False)
-        add_cyl(bm_c, (c.x, c.y, Z_P2), (c.x, c.y, Z_L2 + 9), 2.6, 2.6, 0, sides=16)   # elevadores
-        for a0 in (0.0, math.pi):
-            add_helix(bm_s, (c.x, c.y), 3.2, 6.2, Z_L0, Z_L2, 1.62, a0 + e, 0, steps=64)
         n, tan = outward(e, TOWER_D)
+        a_out = math.atan2(n.y, n.x)
+        a_in = a_out + math.pi
+        hw = 2.3 / TOWER_R
+        holes = [(a_out, hw, Z_L0, Z_L0 + 3.2), (a_in, hw, Z_L0, Z_L0 + 3.2)]
+        holes += [(a_in, hw, z, z + 3.2) for z in levels]
+        add_tube(bm_g, (c.x, c.y), TOWER_R, Z_L0, Z_L2 + 7, holes, 0)
+        add_disc(bm_g, (c.x, c.y), TOWER_R + 0.6, TOWER_R + 0.6, Z_L2 + 7.4, 0, 32)
+        add_cyl(bm_c, (c.x, c.y, Z_P2), (c.x, c.y, Z_L2 + 9), 2.6, 2.6, 0, sides=16)   # elevadores
+        base = a_in - math.radians(127)          # la hélice deja libre el lado del puente
+        for a0 in (0.0, math.pi):
+            add_helix(bm_s, (c.x, c.y), 3.2, 6.2, Z_L0, Z_L2, TURNS, base + a0, 0, steps=64)
+        for z in levels:                          # descansos: anillo con hueco donde pasa la hélice
+            if z >= Z_L2 - 1e-6:
+                add_arc_slab(bm_s, (c.x, c.y), 2.7, 7.8, z, 0.0, 2 * math.pi, 1)
+                continue
+            ah = base + 2 * math.pi * TURNS * (z - Z_L0) / (Z_L2 - Z_L0)
+            gw = math.radians(45)
+            for a0 in (0.0, math.pi):
+                add_arc_slab(bm_s, (c.x, c.y), 2.7, 7.8, z, ah + a0 + gw, ah + a0 + math.pi - gw, 1)
+        for z, side in [(z, a_in) for z in (Z_P2, Z_P1, Z_L0) + levels] + [(Z_L0, a_out)]:
+            d2 = Vector((math.cos(side), math.sin(side), 0))
+            add_obox(bm_c, Vector((c.x, c.y, z + 1.15)) + d2 * 2.62, d2, Vector((-d2.y, d2.x, 0)),
+                     Vector((0, 0, 1)), 0.08, 0.7, 1.15, 1)
         for z in (Z_L05, z_l1, Z_L2):                          # puentes a cada vestíbulo
             add_obox(bm_s, P(e, (FACADE_D + TOWER_D - TOWER_R) / 2, z - 0.25), n, tan,
-                     Vector((0, 0, 1)), (TOWER_D - TOWER_R - FACADE_D) / 2 + 1.2, 3.0, 0.25, 1)
-        add_cyl(bm_g, (c.x, c.y, Z_L2 + 7), (c.x, c.y, Z_L2 + 7.4), TOWER_R + 0.6, TOWER_R + 0.6, 1, sides=32)
-    finish("Torres_Circulacion_Vidrio", bm_g, [M['vidrio'], M['acero']], coll)
-    finish("Torres_Escalera_Doble_Helice", bm_s, [M['madera'], M['acero']], coll, smooth=True)
-    finish("Torres_Nucleo_Elevadores", bm_c, [M['concreto']], coll)
+                     Vector((0, 0, 1)), (TOWER_D - TOWER_R - FACADE_D) / 2 + 1.2, 2.3, 0.25, 2)
+    finish("Torres_Circulacion_Vidrio", bm_g, [M['vidrio'], M['acero']], coll, recalc=False)
+    finish("Torres_Escalera_Doble_Helice_y_Descansos", bm_s, [M['madera'], M['plaza'], M['acero']], coll)
+    finish("Torres_Nucleo_Elevadores", bm_c, [M['concreto'], M['tunel']], coll)
 
     # (b) escaleras eléctricas: L0 -> L0.5 -> L1 -> L2 junto a cada acceso
     bm = bmesh.new()
-    flights = [(Z_L0, Z_L05, 1), (Z_L05, z_l1, -1), (z_l1, Z_L2, 1)]
     for e in ENTRIES:
-        for (za, zb, side) in flights:
+        for (za, zb, side) in STATS['flights']:
             run = (zb - za) / math.tan(math.radians(30))
             for d in (88.0, 90.4):
                 n, tan = outward(e, d)
@@ -853,7 +1025,9 @@ def build_vertical_circulation(M, tiers, coll):
     bm = bmesh.new()
     for t in CORES:
         add_rbox(bm, t, 83.0, Z_P2, 9.0, 12.0, Z_L2 + 4.0 - Z_P2, 0)
-    finish("Nucleos_Escape_Protegidos", bm, [M['escape']], coll)
+        for z in (Z_P2, Z_P1, Z_L0, Z_L05, z_l1, Z_L2):
+            add_rbox(bm, t, 76.9, z, 1.9, 0.3, 2.3, 1)          # puerta cortafuego en cada nivel
+    finish("Nucleos_Escape_Protegidos", bm, [M['escape'], M['tunel']], coll)
 
     STATS['elevadores_estadio'] = 8 * 4 + 16
     STATS['escaleras_electricas'] = 8 * 3 * 2
@@ -862,7 +1036,7 @@ def build_vertical_circulation(M, tiers, coll):
 def build_service_pods(M, coll):
     """Módulos de sanitarios, alimentos, primeros auxilios, sala sensorial y lactancia."""
     mats = [M['sanit'], M['comida'], M['medico'], M['sensorial'], M['lactancia'], M['control']]
-    cycle = [0, 1, 0, 1, 0, 2, 0, 1, 0, 3, 0, 1, 0, 4]
+    cycle = [0, 1, 0, 0, 2, 0, 1, 0, 0, 3, 0, 1, 0, 4]
     names = ["sanitarios", "alimentos", "primeros_aux", "sala_sensorial", "lactancia_familia"]
     counts = [0] * 5
     bm = bmesh.new()
@@ -872,19 +1046,36 @@ def build_service_pods(M, coll):
     k = 0
     area_wc = 0.0
     for z, d in levels:
-        n = 40
+        n = 60
         for i in range(n):
             t = 2 * math.pi * (i + 0.5) / n
-            if any(ang_dist(t, c) < math.radians(5) for c in CORES):
+            if any(ang_dist(t, c) < math.radians(4.5) for c in CORES):
                 continue
-            if any(ang_dist(t, e) < math.radians(8) for e in ENTRIES):
+            if z == Z_L2 and any(ang_dist(t, v) < math.radians(4) for v in VOMS):
+                continue
+            if any(ang_dist(t, e) < math.radians(12 if d > 84 else 4) for e in ENTRIES):
                 continue
             typ = cycle[k % len(cycle)]
             k += 1
             counts[typ] += 1
+            depth = 10.0 if typ == 0 else 7.0
             if typ == 0:
-                area_wc += 16.0 * 7.0
-            add_rbox(bm, t, d, z, 16.0, 7.0, 3.6, typ)
+                area_wc += 10.0 * depth
+            add_rbox(bm, t, d, z, 10.0, depth, 3.6, typ)
+    # kioscos de comida entre columnas (2 cajas c/u)
+    kioscos = 0
+    for z, d in ((Z_L0, 51.0), (Z_L05, 72.0), (STATS['Z_L1'], 72.0), (Z_L2, max(79.0, STATS['d_L2'] + 3.0))):
+        for k in range(96):
+            t = 2 * math.pi * (k + 0.5) / 96
+            if any(ang_dist(t, c) < math.radians(3.5) for c in CORES) or \
+               any(ang_dist(t, e) < math.radians(3.5) for e in ENTRIES) or \
+               (z == Z_L2 and any(ang_dist(t, v) < math.radians(3.5) for v in VOMS)):
+                continue
+            if any(ang_dist(t, (kk + 0.5) * math.pi / 24) < math.radians(0.8) for kk in range(48)):
+                continue                                   # no sobre las columnas
+            add_rbox(bm, t, d, z, 3.5, 2.5, 2.8, 1)
+            kioscos += 1
+    STATS['kioscos'] = kioscos
     # centro de mando y control (seguridad / protección civil) en L1 norte
     add_rbox(bm, math.pi / 2, 70.0, STATS['Z_L1'], 30.0, 8.0, 4.0, 5)
     finish("Modulos_Servicio_Vestibulos", bm, mats, coll)
@@ -1089,7 +1280,30 @@ def build_roof(M, coll):
     bm = bmesh.new()
     sweep(bm, lambda t: [(11.0, z_roof(12, t) - 1.2), (13.6, z_roof(12, t) - 1.2),
                          (13.6, z_roof(12, t) + 0.8), (11.0, z_roof(12, t) + 0.8)], SEG, lambda i, j: 0)
-    finish("Anillo_Compresion", bm, [M['acero']], coll)
+    finish("Anillo_Tension_Interior", bm, [M['acero']], coll)
+
+    bm = bmesh.new()   # anillo de compresión exterior (sobre los árboles) + 36 armaduras radiales
+    sweep(bm, lambda t: [(TREE_D - 9.0, z_roof(TREE_D - 9, t) - 3.2), (TREE_D - 6.0, z_roof(TREE_D - 6, t) - 3.2),
+                         (TREE_D - 6.0, z_roof(TREE_D - 6, t) - 1.2), (TREE_D - 9.0, z_roof(TREE_D - 9, t) - 1.2)],
+          SEG, lambda i, j: 0)
+    for k in range(36):
+        t = 2 * math.pi * k / 36
+        d_out = TREE_D - 7.5
+        top = [P(t, d, z_roof(d, t) - 0.7) for d in (13.0, d_out)]
+        bot = [P(t, 13.0, z_roof(12, t) - 1.2), P(t, d_out, z_roof(d_out, t) - 3.2)]
+        mid = P(t, (13.0 + d_out) / 2, (bot[0].z + bot[1].z) / 2 - 4.0)
+        for (a, b) in ((bot[0], mid), (mid, bot[1])):
+            add_cyl(bm, a, b, 0.2, 0.2, 0, sides=6)                    # cable inferior
+        n_s = 10
+        for i in range(n_s + 1):
+            d = 13.0 + (d_out - 13.0) * i / n_s
+            f = i / n_s
+            zb = (bot[0].z + (mid.z - bot[0].z) * (f / 0.5)) if f <= 0.5 else (mid.z + (bot[1].z - mid.z) * ((f - 0.5) / 0.5))
+            add_cyl(bm, P(t, d, zb), P(t, d, z_roof(d, t) - 0.7), 0.12, 0.12, 0, sides=4)   # montantes
+        for i in range(n_s):
+            d0, d1 = 13.0 + (d_out - 13.0) * i / n_s, 13.0 + (d_out - 13.0) * (i + 1) / n_s
+            add_cyl(bm, P(t, d0, z_roof(d0, t) - 0.7), P(t, d1, z_roof(d1, t) - 0.7), 0.25, 0.25, 0, sides=6)
+    finish("Cubierta_Anillo_Compresion_y_Armaduras_Radiales", bm, [M['acero']], coll)
 
     bm = bmesh.new()
     sweep(bm, lambda t: [(11.3, z_roof(12, t) - 13.0), (11.3, z_roof(12, t) - 4.0)], SEG,
@@ -1098,12 +1312,36 @@ def build_roof(M, coll):
     ob.modifiers.new("Grosor", 'SOLIDIFY').thickness = 0.6
 
 
+def beam(bm, a, b, w, h, mat, up=Vector((0, 0, 1))):
+    """Viga de sección rectangular de a a b (cara superior en la línea a-b)."""
+    a, b = Vector(a), Vector(b)
+    ax = (b - a).normalized()
+    ay = up.cross(ax)
+    if ay.length < 1e-6:
+        ay = Vector((1, 0, 0))
+    ay.normalize()
+    az = ax.cross(ay)
+    if az.z < 0:
+        az, ay = -az, -ay
+    add_obox(bm, (a + b) / 2 - az * (h / 2), ax, ay, az, (b - a).length / 2, w / 2, h / 2, mat)
+
+
 def build_retractable(M, coll):
-    """16 hojas que se deslizan sobre rieles. Frame 1 = abierto, frame 120 = cerrado."""
+    """Techo retráctil de 16 hojas.
+
+    Cómo se sostiene (todo está modelado):
+      * Cada hoja tiene 2 carritos (bogies) en su eje que ruedan sobre 2 vigas-riel rectas.
+      * Las vigas-riel interiores salen de un ANILLO CENTRAL (cubo) y llegan al anillo de
+        tensión; abajo llevan cuerda inferior y montantes (armadura tipo rueda de bicicleta).
+      * Sobre la cubierta fija, las vigas-riel se apoyan en postes cada ~12 m.
+      * Al abrir, cada hoja sube 3 m y se desliza en línea recta a su "estacionamiento"
+        sobre la cubierta fija. Frame 1 = abierto, frame 120 = cerrado.
+    """
     NP = 16
     z_top = ROOF_Z + 3 + 1.0 + 4.0
     area = 0.0
-    bm_r = bmesh.new()
+    bm_s = bmesh.new()
+    hub_top, hub_bot = [], []
     for k in range(NP):
         t0, t1 = 2 * math.pi * k / NP, 2 * math.pi * (k + 1) / NP
         bm = bmesh.new()
@@ -1114,11 +1352,8 @@ def build_retractable(M, coll):
             t = t0 + (t1 - t0) * a / SUB
             ex, ey = se(t, 12.6)
             ze = z_roof(12, t) + 1.0
-            col = []
-            for r in range(1, RS + 1):
-                s = r / RS
-                col.append(bm.verts.new((ex * s, ey * s, ze + (z_top - ze) * (1 - s * s))))
-            cols.append(col)
+            cols.append([bm.verts.new((ex * r / RS, ey * r / RS, ze + (z_top - ze) * (1 - (r / RS) ** 2)))
+                         for r in range(1, RS + 1)])
         for a in range(SUB):
             f = bm.faces.new((center, cols[a][0], cols[a + 1][0]))
             area += f.calc_area()
@@ -1129,19 +1364,61 @@ def build_retractable(M, coll):
         mx, my = se(tm, 12.6)
         L = math.hypot(mx, my)
         ux, uy = mx / L, my / L
-        ob = finish(f"Techo_Retractil_Hoja_{k + 1:02d}", bm, [M['etfe_mov']], coll, smooth=True)
+        ze_m = z_roof(12, tm) + 1.0
+        mv = Vector((ux * (L + 3), uy * (L + 3), 3.0))
+        dirv = mv.normalized()
+        sup = []
+        for sfr in (0.12, 0.9):                       # carritos (se mueven con la hoja)
+            p = Vector((mx * sfr, my * sfr, ze_m + (z_top - ze_m) * (1 - sfr * sfr) - 1.0))
+            sup.append(p)
+            add_obox(bm, p + Vector((0, 0, 0.5)), Vector((ux, uy, 0)), Vector((-uy, ux, 0)),
+                     Vector((0, 0, 1)), 1.8, 1.1, 0.5, 1)
+        ob = finish(f"Techo_Retractil_Hoja_{k + 1:02d}", bm, [M['etfe_mov'], M['acero']], coll)
         ob.modifiers.new("Grosor", 'SOLIDIFY').thickness = 0.35
-        ob.location = (ux * (L + 3), uy * (L + 3), 3.0)
+        ob.location = mv
         ob.keyframe_insert("location", frame=1)
         ob.keyframe_insert("location", frame=20)
         ob.location = (0, 0, 0)
         ob.keyframe_insert("location", frame=120)
-        for s in (-3.0, 3.0):                                    # rieles
-            n, tan = outward(tm, 14)
-            a = P(tm, 14, z_roof(14, tm) + 2.8) + tan * s
-            b = P(tm, 92, z_roof(92, tm) + 2.8) + tan * s
-            add_cyl(bm_r, a, b, 0.25, 0.25, 0, sides=6)
-    finish("Rieles_Techo_Retractil", bm_r, [M['acero']], coll, smooth=True)
+
+        for si, p in enumerate(sup):                  # vigas-riel fijas
+            a = p - dirv * 2.5
+            b = p + mv + dirv * 2.5
+            beam(bm_s, a, b, 1.0, 1.2, 0)
+            n_post = int((b - a).length // 12)
+            for q_i in range(n_post + 1):
+                q = a + (b - a) * (q_i / max(1, n_post))
+                rr = math.hypot(q.x, q.y)
+                if rr < L - 0.5:
+                    continue                          # sobre el hueco: lo resuelve la armadura
+                d_here = 12.6 + (rr - L)
+                if d_here > ROOF_OUT - 2:
+                    continue
+                z_base = z_roof(12, tm) + 0.8 if d_here < 14 else z_roof(d_here, tm) + 2.4
+                if q.z - 1.2 - z_base > 0.3:
+                    add_cyl(bm_s, (q.x, q.y, z_base), (q.x, q.y, q.z - 1.2), 0.35, 0.35, 1, sides=8)
+            if si == 0:                               # armadura bajo el riel interior (cubo -> anillo)
+                ring_pt = a + (b - a) * ((L - math.hypot(a.x, a.y)) /
+                                         max(1e-6, math.hypot(b.x, b.y) - math.hypot(a.x, a.y)))
+                ring_bot = Vector((ring_pt.x, ring_pt.y, z_roof(12, tm) - 1.2))
+                a_bot = a - Vector((0, 0, 6.0))
+                add_cyl(bm_s, a_bot, ring_bot, 0.3, 0.3, 1, sides=6)
+                for f in [i / 8 for i in range(1, 8)]:
+                    top_p = a + (ring_pt - a) * f - Vector((0, 0, 1.2))
+                    bot_p = a_bot + (ring_bot - a_bot) * f
+                    add_cyl(bm_s, bot_p, top_p, 0.18, 0.18, 1, sides=6)
+                    if f < 0.9:
+                        nxt = a + (ring_pt - a) * (f + 1 / 8) - Vector((0, 0, 1.2))
+                        add_cyl(bm_s, bot_p, nxt, 0.12, 0.12, 1, sides=4)
+                hub_top.append(a - Vector((0, 0, 1.2)))
+                hub_bot.append(a_bot)
+    for ring in (hub_top, hub_bot):                   # anillo central (cubo) de la rueda
+        for i in range(NP):
+            add_cyl(bm_s, ring[i], ring[(i + 1) % NP], 0.9, 0.9, 1, sides=8)
+    for i in range(NP):
+        add_cyl(bm_s, hub_top[i], hub_bot[i], 0.5, 0.5, 1, sides=8)
+        add_cyl(bm_s, hub_top[i], hub_bot[(i + 1) % NP], 0.25, 0.25, 1, sides=6)
+    finish("Techo_Retractil_Vigas_Riel_y_Cubo_Central", bm_s, [M['acero'], M['acero']], coll, smooth=False)
     STATS['techo_retractil'] = area
     sc = bpy.context.scene
     sc.frame_start, sc.frame_end, sc.frame_current = 1, 120, 1
@@ -1176,11 +1453,53 @@ def near_entry(t, d, half):
     return any(ang_dist(t, e) * r_eff(d) < half for e in ENTRIES)
 
 
+def facade_strip(bm, t0, t1, d, za, zb, mat=0):
+    """Franja vertical de fachada entre za y zb (zb=None: hasta la cubierta)."""
+    n = max(1, int(arc_len(t0, t1, d, 8) / 3.0) + 1)
+    prev = None
+    for j in range(n + 1):
+        t = t0 + (t1 - t0) * j / n
+        top = z_roof(d, t) - 0.3 if zb is None else zb
+        x, y = se(t, d)
+        cur = (bm.verts.new((x, y, za)), bm.verts.new((x, y, top)))
+        if prev:
+            bm.faces.new((prev[0], cur[0], cur[1], prev[1])).material_index = mat
+        prev = cur
+
+
 def build_facade(M, coll):
-    bm = bmesh.new()   # doble piel de vidrio acústico
+    z_l1 = STATS['Z_L1']
+    holes = []
+    for e in ENTRIES:
+        sp = speed(e, FACADE_D)
+        for a, b in ((-24.5, -8.5), (8.5, 24.5)):                 # puertas principales
+            holes.append((e + a / sp, e + b / sp, [(Z_L0, Z_L0 + 4.0)]))
+        holes.append((e - 2.4 / sp, e + 2.4 / sp, [(z, z + 3.2) for z in (Z_L05, z_l1, Z_L2)]))  # puentes
+    for c in CORES:                                               # salidas de emergencia
+        sp = speed(c, FACADE_D)
+        holes.append((c - 3.0 / sp, c + 3.0 / sp, [(Z_L0, Z_L0 + 3.0)]))
+    holes.sort()
+    bm, bm_f = bmesh.new(), bmesh.new()    # doble piel de vidrio acústico con vanos
     for dd in (FACADE_D, FACADE_D - 1.2):
-        sweep(bm, lambda t, dd=dd: [(dd, Z_L0), (dd, z_roof(dd, t) - 0.3)], SEG, lambda i, j: 0, closed=False)
+        prev_end = holes[-1][1] - 2 * math.pi
+        for (h0, h1, zs) in holes:
+            if h0 > prev_end:
+                facade_strip(bm, prev_end, h0, dd, Z_L0, None)
+            zc = Z_L0
+            for (za, zb) in zs:
+                if za > zc:
+                    facade_strip(bm, h0, h1, dd, zc, za)
+                zc = zb
+            facade_strip(bm, h0, h1, dd, zc, None)
+            prev_end = h1
+    for (h0, h1, zs) in holes:                                    # marcos de puerta
+        tc, w = (h0 + h1) / 2, arc_len(h0, h1, FACADE_D)
+        for (za, zb) in zs:
+            add_rbox(bm_f, tc, FACADE_D - 0.6, zb, w + 0.6, 1.6, 0.35, 0)
+            for tt in (h0, h1):
+                add_rbox(bm_f, tt, FACADE_D - 0.6, za, 0.3, 1.6, zb - za, 0)
     finish("Fachada_Doble_Piel_Vidrio", bm, [M['vidrio']], coll, recalc=False)
+    finish("Fachada_Marcos_Puertas", bm_f, [M['acero']], coll)
 
     bm = bmesh.new()
     NF = 330
@@ -1211,7 +1530,7 @@ def build_facade(M, coll):
 
 
 # ==========================================================================
-# 6. ANILLO "LA LÍNEA": plaza comercial con parque en la azotea
+# 6. PLAZA SAKBÉ: anillo comercial con parque en la azotea
 # ==========================================================================
 def ring_segments():
     """8 tramos separados por brechas alineadas con los accesos del estadio."""
@@ -1233,85 +1552,192 @@ def ring_segments():
     return segs
 
 
-def build_ring(M, coll, coll_night):
-    mats = [M['espejo'], M['vidrio_canon'], M['parque'], M['sofito'], M['concreto'], M['madera']]
-    MIR, CAN, PARK, SOF, CON, WOOD = range(6)
-    bm = bmesh.new()
-    gfa = 0.0
-    segs = ring_segments()
-    slabs = [(RING_IN, CANYON_IN, MIR, CAN, 'fachada_estadio', 'fachada_canon'),
-             (CANYON_OUT, RING_OUT, CAN, MIR, 'fachada_canon', 'fachada_exterior')]
-    for sg in segs:
-        for (ta, tb, kind) in sg['pieces']:
-            for (d0, d1, m_in, m_out, k_in, k_out) in slabs:
-                e0 = MIR if abs(ta - sg['ta']) < 1e-9 else WOOD
-                e1 = MIR if abs(tb - sg['tb']) < 1e-9 else WOOD
-                if kind == 'full':
-                    blocks = [(0.0, RING_H, CON, PARK)]
-                elif kind == 'portal':
-                    blocks = [(PORTAL_H, RING_H, SOF, PARK)]
-                else:
-                    blocks = [(0.0, WIN_Z[0], CON, PARK), (WIN_Z[1], RING_H, SOF, PARK)]
-                for (z0, z1, mb, mt) in blocks:
-                    arc_block(bm, ta, tb, d0, d1, z0, z1, (mb, m_out, mt, m_in, e0, e1),
-                              tally=(None, k_out, 'azotea' if z1 == RING_H else None, k_in, None, None))
-                    gfa += arc_len(ta, tb, (d0 + d1) / 2) * (d1 - d0) * round((z1 - z0) / FLOOR_H)
-    finish("Anillo_La_Linea_Edificio", bm, mats, coll)
-    STATS['anillo_gfa'] = gfa
-    STATS['anillo_segmentos'] = segs
+PROGRAM = {0: 'tiendas', 1: 'tiendas', 2: 'tiendas', 3: 'comida', 4: 'comida', 5: 'cine',
+           6: 'deporte', 7: 'salud', 8: 'oficina', 9: 'oficina'}
+PROGRAM_TXT = {'tiendas': "Tiendas", 'comida': "Restaurantes y terrazas", 'cine': "Cines",
+               'deporte': "Gimnasio y centro deportivo", 'salud': "Clínica, guardería y museo del deporte",
+               'oficina': "Oficinas y coworking"}
 
-    # cañón interior: terrazas-jardín, puentes, elevadores panorámicos, escaleras eléctricas
-    bm = bmesh.new()
-    bm_e = bmesh.new()
+
+def end_wall(bm, t, d0, d1, z0, z1, mat):
+    v = [bm.verts.new((*se(t, d), z)) for d, z in ((d0, z0), (d1, z0), (d1, z1), (d0, z1))]
+    bm.faces.new(v).material_index = mat
+
+
+def ring_core_positions(sg):
+    """Núcleos (escaleras protegidas + elevadores) cada ~60 m, fuera de portales y ventanas."""
+    out = []
+    for (d0, d1) in ((RING_IN, CANYON_IN), (CANYON_OUT, RING_OUT)):
+        L = arc_len(sg['ta'], sg['tb'], (d0 + d1) / 2)
+        n = max(2, round(L / 60))
+        for i in range(n):
+            t = sg['ta'] + (sg['tb'] - sg['ta']) * (i + 0.5) / n
+            for (p0, p1, kd) in sg['pieces']:
+                if kd != 'full' and p0 - dt_w(6, t, d0) < t < p1 + dt_w(6, t, d0):
+                    t = p1 + dt_w(8, t, d0)
+            out.append((t, d0, d1))
+    return out
+
+
+def build_ring(M, coll, coll_night):
+    """Plaza Sakbé: anillo hueco con pisos, fachadas, programa por nivel y circulación vertical."""
+    prog_keys = ['tiendas', 'comida', 'cine', 'deporte', 'salud', 'oficina']
+    prog_mats = M['tiendas'] + [m for k in prog_keys[1:] for m in M['programa'][k]]
+    prog_idx = {'tiendas': list(range(6))}
+    off = 6
+    for k in prog_keys[1:]:
+        prog_idx[k] = list(range(off, off + len(M['programa'][k])))
+        off += len(M['programa'][k])
+    base = [M['espejo'], M['vidrio'], M['parque'], M['sofito'], M['losa'], M['madera'], M['luz_int'],
+            M['tunel'], M['escape']]
+    MIR, GLS, PARK, SOF, LOSA, WOOD, LUZ, DOOR, CORE = range(9)
+    mats = base + prog_mats
+    P0 = len(base)
+
+    segs = ring_segments()
+    STATS['anillo_segmentos'] = segs
+    gfa = 0.0
+    bm = bmesh.new()      # estructura y fachadas
+    bm_p = bmesh.new()    # programa interior
+    bm_e = bmesh.new()    # núcleos
     cores = 0
+    slabs = [(RING_IN, CANYON_IN, 'fachada_estadio', RING_IN), (CANYON_OUT, RING_OUT, 'fachada_exterior', RING_OUT)]
     for sg in segs:
-        ta, tb, tm = sg['ta'], sg['tb'], sg['tm']
+        core_pos = ring_core_positions(sg)
+        for (t, d0, d1) in core_pos:
+            add_rbox(bm_e, t, (d0 + d1) / 2, Z_P2, 10.0, 9.0, RING_H - 0.2 - Z_P2, CORE)
+            add_rbox(bm_e, t, (d0 + d1) / 2, RING_H, 10.0, 9.0, 3.5, GLS)
+            for f in range(int(RING_H / FLOOR_H)):
+                zf = f * FLOOR_H
+                n_, tan_ = outward(t, (d0 + d1) / 2)
+                for sgn in (-1, 1):                      # puertas a cada piso (dos caras del núcleo)
+                    add_obox(bm_e, P(t, (d0 + d1) / 2, zf + 1.2) + tan_ * (sgn * 5.05), tan_, n_,
+                             Vector((0, 0, 1)), 0.1, 0.9, 1.15, DOOR)
+            cores += 1
+        for (ta, tb, kind) in sg['pieces']:
+            for (d0, d1, tally_out, face_out) in slabs:
+                face_can = CANYON_IN if d1 == CANYON_IN else CANYON_OUT
+                if kind == 'full':
+                    blocks = [(0.0, RING_H)]
+                elif kind == 'portal':
+                    blocks = [(PORTAL_H, RING_H)]
+                else:
+                    blocks = [(0.0, WIN_Z[0]), (WIN_Z[1], RING_H)]
+                Lm = arc_len(ta, tb, (d0 + d1) / 2)
+                for (z0, z1) in blocks:
+                    gfa += Lm * (d1 - d0) * round((z1 - z0) / FLOOR_H)
+                    # losas de entrepiso (la primera, si está en el aire, con plafón de madera)
+                    for f in range(int(round((z1 - z0) / FLOOR_H))):
+                        zf = z0 + f * FLOOR_H
+                        arc_block(bm, ta, tb, d0 + 0.1, d1 - 0.1, zf - 0.35, zf,
+                                  (SOF if (f == 0 and z0 > 0) else LOSA, LOSA, LOSA, LOSA, LOSA, LOSA))
+                    # losa de azotea / terraza (parque)
+                    arc_block(bm, ta, tb, d0 + 0.1, d1 - 0.1, z1 - 0.6, z1, (LOSA, LOSA, PARK, LOSA, LOSA, LOSA))
+                    if z1 == RING_H:
+                        AREAS['azotea'] = AREAS.get('azotea', 0.0) + Lm * (d1 - d0)
+                    # fachadas: vidrio espejo hacia el estadio y la calle, vidrio claro hacia el cañón
+                    arc_strip(bm, ta, tb, face_out, z0, z1, MIR, step=4.0)
+                    arc_strip(bm, ta, tb, face_can, z0, z1, GLS, step=4.0)
+                    AREAS[tally_out] = AREAS.get(tally_out, 0.0) + arc_len(ta, tb, face_out) * (z1 - z0)
+                    AREAS['fachada_canon'] = AREAS.get('fachada_canon', 0.0) + arc_len(ta, tb, face_can) * (z1 - z0)
+                    for tt in (ta, tb):                  # muros de cabecera
+                        at_gap = abs(tt - sg['ta']) < 1e-9 or abs(tt - sg['tb']) < 1e-9
+                        end_wall(bm, tt, d0, d1, z0, z1, MIR if at_gap else WOOD)
+                    # programa: dos crujías de locales y pasillo central con luminaria
+                    for f in range(int(round((z1 - z0) / FLOOR_H))):
+                        zf = z0 + f * FLOOR_H
+                        lvl = int(round(zf / FLOOR_H))
+                        prog = PROGRAM[lvl]
+                        mod = 22.0 if prog == 'cine' else 11.0
+                        n_mod = max(1, int(Lm // mod))
+                        for m_i in range(n_mod):
+                            tm0 = ta + (tb - ta) * m_i / n_mod
+                            tm1 = ta + (tb - ta) * (m_i + 1) / n_mod
+                            tc = (tm0 + tm1) / 2
+                            if any(ang_dist(tc, ct) < dt_w(9.0, tc, cd0) for (ct, cd0, cd1) in core_pos
+                                   if cd0 == d0):
+                                continue
+                            g = dt_w(0.6, tc, d0) / 2
+                            for (a, b, front) in ((d0 + 0.6, d0 + 6.0, 1), (d1 - 6.0, d1 - 0.6, 3)):
+                                mi = P0 + random.choice(prog_idx[prog])
+                                fm = [mi] * 6
+                                fm[front] = GLS                 # aparador de vidrio hacia el pasillo
+                                arc_block(bm_p, tm0 + g, tm1 - g, a, b, zf, zf + 3.5, tuple(fm), n=2)
+                        for dl in (-1.4, 1.4):
+                            arc_block(bm, ta, tb, (d0 + d1) / 2 + dl - 0.5, (d0 + d1) / 2 + dl + 0.5,
+                                      zf + FLOOR_H - 0.5, zf + FLOOR_H - 0.42, (LUZ,) * 6)
+    finish("Plaza_Sakbe_Estructura_y_Fachadas", bm, mats, coll, recalc=False)
+    finish("Plaza_Sakbe_Locales_y_Programa", bm_p, mats, coll)
+    finish("Plaza_Sakbe_Nucleos_Escaleras_y_Elevadores", bm_e, mats, coll)
+    STATS['anillo_gfa'] = gfa
+    STATS['anillo_nucleos'] = cores
+
+    # cañón: balcones-pasillo en cada piso, escaleras eléctricas, elevadores panorámicos, puentes
+    bm = bmesh.new()
+    esc = 0
+    for sg in segs:
+        ta, tb = sg['ta'], sg['tb']
         for (pa, pb, kind) in sg['pieces']:
-            for z in (9.0, 18.0, 36.0):
+            for f in range(1, int(RING_H / FLOOR_H)):
+                z = f * FLOOR_H
                 if kind == 'portal' and z < PORTAL_H:
                     continue
-                if kind == 'window' and WIN_Z[0] <= z <= WIN_Z[1]:
+                if kind == 'window' and WIN_Z[0] < z < WIN_Z[1]:
                     continue
-                arc_block(bm, pa, pb, CANYON_IN, CANYON_IN + 1.6, z, z + 0.9, (2,) * 6)
-                arc_block(bm, pa, pb, CANYON_OUT - 1.6, CANYON_OUT, z, z + 0.9, (2,) * 6)
-        for f, z in ((0.22, 13.5), (0.42, 27.0), (0.62, 13.5), (0.82, 27.0)):
+                for (a, b, rail) in ((CANYON_IN, CANYON_IN + 1.8, CANYON_IN + 1.8),
+                                     (CANYON_OUT - 1.8, CANYON_OUT, CANYON_OUT - 1.8)):
+                    arc_block(bm, pa, pb, a, b, z - 0.3, z, (0,) * 6)
+                    arc_strip(bm, pa, pb, rail, z, z + 1.1, 3, step=6.0)
+                    if f % 2 == 0:
+                        pc = rail - 0.35 if a == CANYON_IN else rail + 0.35
+                        arc_block(bm, pa, pb, pc - 0.25, pc + 0.25, z, z + 0.6, (2,) * 6)
+        # escaleras eléctricas en zigzag de planta baja a la azotea (una cadena por torre)
+        for fpos, dlin, dirn in ((0.36, CANYON_IN + 2.7, 1), (0.64, CANYON_OUT - 2.7, -1)):
+            t_s = ta + (tb - ta) * fpos
+            run = FLOOR_H / math.tan(math.radians(30))
+            sp = speed(t_s, dlin)
+            for fl in range(int(RING_H / FLOOR_H)):
+                za, zb = fl * FLOOR_H, (fl + 1) * FLOOR_H
+                o0 = 0.0 if fl % 2 == 0 else run
+                o1 = run if fl % 2 == 0 else 0.0
+                for lane in (0.0, 1.8 * dirn):
+                    a = P(t_s + o0 / sp, dlin + lane, za)
+                    b = P(t_s + o1 / sp, dlin + lane, zb)
+                    n_, tan_ = outward(t_s, dlin)
+                    ax = (b - a).normalized()
+                    az = ax.cross(n_)
+                    if az.z < 0:
+                        az = -az
+                    add_obox(bm, (a + b) / 2 + az * 0.5, ax, n_, az, (b - a).length / 2, 0.75, 0.5, 5)
+                    esc += 1
+                edge = CANYON_IN + 1.8 if dirn > 0 else CANYON_OUT - 1.8
+                far = dlin + 2.55 * dirn
+                for oo, zz in ((o0, za), (o1, zb)):    # descansos que conectan con el balcón
+                    if zz <= 0:
+                        continue
+                    add_rbox(bm, t_s + oo / sp, (edge + far) / 2, zz - 0.3, 3.2, abs(far - edge), 0.3, 0)
+        for f, z in ((0.22, 13.5), (0.42, 27.0), (0.62, 13.5), (0.82, 27.0)):     # puentes entre torres
             t = ta + (tb - ta) * f
             h = dt_w(4.0, t, 183) / 2
-            arc_block(bm, t - h, t + h, CANYON_IN, CANYON_OUT, z - 0.6, z, (0, 0, 0, 0, 0, 0))
-        for f in (0.33, 0.7):                                         # puentes-parque arriba
+            arc_block(bm, t - h, t + h, CANYON_IN, CANYON_OUT, z - 0.6, z, (0,) * 6)
+        for f in (0.33, 0.7):                                                # puentes-parque arriba
             t = ta + (tb - ta) * f
             h = dt_w(10.0, t, 183) / 2
             arc_block(bm, t - h, t + h, CANYON_IN, CANYON_OUT, RING_H - 1.0, RING_H, (0, 0, 2, 0, 0, 0))
-        for f in (0.08, 0.92):
-            c = P(ta + (tb - ta) * f, 183.0, 0)
+        for f in (0.08, 0.92):                                               # elevadores panorámicos
+            t = ta + (tb - ta) * f
+            c = P(t, 183.0, 0)
             add_cyl(bm, (c.x, c.y, Z_P2), (c.x, c.y, RING_H + 3), 1.8, 1.8, 3, sides=16)
             add_box(bm, (c.x, c.y, random.uniform(5, 40)), (1.6, 1.6, 2.6), 4)
-        for f, za in ((0.5, 0.0), (0.5, 9.0)):
-            t = ta + (tb - ta) * (f + (0.05 if za else -0.05))
-            n, tan = outward(t, CANYON_IN + 3.5)
-            a = P(t, CANYON_IN + 3.5, za)
-            b = a + tan * (9.0 / math.tan(math.radians(30))) + Vector((0, 0, 9.0))
-            ax = (b - a).normalized()
-            az = ax.cross(n)
-            if az.z < 0:
-                az = -az
-            add_obox(bm, (a + b) / 2, ax, n, az, (b - a).length / 2, 0.8, 0.6, 5)
-        # núcleos de circulación vertical (escaleras protegidas + elevadores), cada ~60 m
-        for (d0, d1) in ((RING_IN, CANYON_IN), (CANYON_OUT, RING_OUT)):
-            L = arc_len(ta, tb, (d0 + d1) / 2)
-            n = max(2, round(L / 60))
-            for i in range(n):
-                t = ta + (tb - ta) * (i + 0.5) / n
-                if any(abs(t - (p0 + p1) / 2) < (p1 - p0) / 2 + dt_w(6, t, d0) for (p0, p1, kd) in sg['pieces']
-                       if kd != 'full'):
-                    t += dt_w(14, t, d0)
-                add_rbox(bm_e, t, (d0 + d1) / 2, Z_P2, 10.0, 9.0, RING_H - 0.2 - Z_P2, 0)
-                add_rbox(bm_e, t, (d0 + d1) / 2, RING_H, 10.0, 9.0, 3.5, 1)
-                cores += 1
-    finish("Canon_Terrazas_Puentes_Elevadores", bm,
+            for fl in range(int(RING_H / FLOOR_H) + 1):
+                z = fl * FLOOR_H
+                h = dt_w(2.4, t, 183) / 2
+                arc_block(bm, t - h, t + h, CANYON_IN + 1.8, 181.2, z - 0.3, z, (0,) * 6)
+                arc_block(bm, t - h, t + h, 184.8, CANYON_OUT - 1.8, z - 0.3, z, (0,) * 6)
+    finish("Canon_Balcones_Escaleras_Elevadores_Puentes", bm,
            [M['acero'], M['madera'], M['parque'], M['vidrio'], M['acento'], M['esc_elec']], coll)
-    finish("Anillo_Nucleos_Escape_y_Elevadores", bm_e, [M['escape'], M['vidrio']], coll)
-    STATS['anillo_nucleos'] = cores
+    STATS['anillo_escaleras_electricas'] = esc
+    STATS['anillo_elevadores_panoramicos'] = 16
 
     # azotea: pista de trote, sendero, barandales de vidrio, pérgolas solares, puentes sobre brechas
     bm = bmesh.new()
@@ -1800,6 +2226,9 @@ def checks_and_consumption(tiers):
     ada = 36 + math.ceil((total - 5000) / 200)
     lines.append(f"SANITARIOS: {S['sanitarios_m2']:,.0f} m² ≈ {S['muebles_sanitarios']:,} muebles "
                  f"(≈1 por {total / S['muebles_sanitarios']:.0f} personas)")
+    pos = S['modulos']['alimentos'] * 8 + S['kioscos'] * 2
+    lines.append(f"ALIMENTOS: {S['modulos']['alimentos']} módulos + {S['kioscos']} kioscos ≈ {pos} cajas "
+                 f"(≈1 por {total / pos:.0f} personas)")
     lines.append(f"ACCESIBILIDAD: {wheel:,} lugares silla de ruedas (ADA pide {ada}) | "
                  f"{S['elevadores_estadio']} elevadores estadio | {S['cajones_accesibles']} cajones accesibles")
     # evacuación (Green Guide: 79 p/m/min escaleras, 109 p/m/min plano)
@@ -1808,7 +2237,7 @@ def checks_and_consumption(tiers):
     w2 = SEG // 8 * perim(t2['d0'] + 2) / SEG
     vom = t3['spec']['vom']
     n_vom = SEG // vom['every']
-    w3 = n_vom * len(vom['segs']) * perim(t3['d0'] + 9) / SEG
+    w3 = n_vom * (len(vom['flat']) - 1) * perim(t3['d0'] + 9) / SEG
     e1, e2, e3 = pt[0] / (w1 * 79), pt[1] / (w2 * 79), pt[2] / (w3 * 79)
     stairs_w = 8 * 2 * 3.0 + 16 * 2 * 1.8
     up = pt[1] + pt[2]
@@ -1870,7 +2299,7 @@ def main():
         ('vest', "06_Vestibulos_y_Servicios"), ('circ', "07_Circulacion_Vertical"),
         ('jug', "08_Zona_Jugadores_Nivel_Campo"), ('cub', "09_Cubierta_Fija_y_Halo"),
         ('ret', "10_Techo_Retractil_(animado)"), ('arb', "11_Arboles_Estructurales"),
-        ('fach', "12_Fachada_y_Accesos"), ('anillo', "13_Anillo_La_Linea"),
+        ('fach', "12_Fachada_y_Accesos"), ('anillo', "13_Plaza_Sakbe"),
         ('suelo', "14_Plaza_Avenida_Suelo"), ('agua', "15_Agua"), ('sub', "16_Subterraneo_Estacionamiento"),
         ('evac', "17_Evacuacion"), ('veg', "18_Vegetacion"),
         ('cams', "19_Camaras"), ('etq', "20_Etiquetas_Info"),
@@ -1916,18 +2345,32 @@ def main():
     add_camera("CAM_Torre_Circulacion", (*se(ENTRIES[1], 142), 1.7), (*se(ENTRIES[1], TOWER_D), 17), 24, cams)
     add_camera("CAM_Subterraneo_Rayos_X", (-260, -330, 140), (0, 0, -10), 30, cams)
     add_camera("CAM_Zona_Jugadores", (0, 44, 42), (0, 104, -12), 20, cams)
+    tv = VOMS[4]
+    add_camera("CAM_Vomitorio_L2", (*se(tv + 0.05, 92.0), Z_L2 + 1.7), (*se(tv, 76.0), Z_L2 + 4.0), 18, cams)
+    add_camera("CAM_Techo_Estructura", (60, -300, 175), (0, 0, 58), 30, cams)
+    add_camera("CAM_Plaza_Sakbe_Interior", (*se(0.62, 168.0), 2 * FLOOR_H + 1.7), (*se(0.70, 168.0), 2 * FLOOR_H + 1.2), 18, cams)
+    add_camera("CAM_Escalera_Electrica_Vestibulo", (*se(ENTRIES[0] + 0.02, 80.0), Z_L05 + 1.7),
+               (*se(ENTRIES[0] + 0.10, 90.0), Z_L05 + 6.0), 18, cams)
     cam_night = add_camera("CAM_Noche_Aerea", (-430, -560, 260), (0, 0, 10), 38, cams)
     add_camera("CAM_Noche_Interior", (-30, -(B + 92), 47), (20, 10, -12), 18, cams)
 
     S = STATS
     lab = C['etq']
     L = [
-        (f"ESTADIO OASIS · {S['aforo_total']:,} personas", (0, 0, 140), 14),
+        (f"ESTADIO YAXCHÉ · {S['aforo_total']:,} personas", (0, 0, 140), 14),
         ("Techo retráctil: 16 hojas ETFE (frame 1 abierto / 120 cerrado)", (0, 0, 92), 6),
         ("Halo LED 360°", (0, 0, 44), 5),
+        ("Cubo central + 32 vigas-riel: sostienen y guían las hojas", (0, 30, 80), 5),
+        ("Anillo de compresión + 36 armaduras radiales (cubierta fija)", (*se(math.pi * 0.6, 100), 70), 5),
+        ("Vomitorio: escalera del pasillo transversal al vestíbulo L2", (*se(VOMS[4], 80), 40), 3.5),
+        ("Escaleras eléctricas L0 → L0.5 → L1 → L2 (con huecos en losa)", (*se(ENTRIES[0], 90), 34), 4),
+        ("Niveles: 0-2 tiendas · 3-4 restaurantes · 5 cines · 6 deporte · 7 clínica/guardería/museo · 8-9 oficinas",
+         (*se(-math.pi / 4 - 0.3, 210), RING_H + 12), 4),
+        ("Escaleras eléctricas del cañón: planta baja → parque", (*se(0.6, 183), 50), 4),
+        ("Núcleos: escalera protegida + elevadores cada ~60 m", (*se(1.4, 168), 50), 4),
         ("Torres de circulación: escalera de doble hélice + 4 elevadores", (*se(ENTRIES[1], 120), 46), 5),
         ("16 núcleos de escape protegidos", (*se(CORES[3], 83), 50), 4),
-        (f"LA LÍNEA en anillo · {S['anillo_gfa'] / 1e3:,.0f} mil m² · parque en la azotea",
+        (f"PLAZA SAKBÉ · {S['anillo_gfa'] / 1e3:,.0f} mil m² · parque en la azotea",
          (*se(-math.pi / 4, 183), RING_H + 22), 8),
         ("Cañón verde: terrazas, puentes, elevadores", (*se(0.95, 183), 30), 5),
         ("Brecha 30 m: conexión peatonal y visual", (*se(ENTRIES[5], 183), 12), 5),
@@ -1964,7 +2407,7 @@ def main():
     for k in ('aforo_total', 'butacas', 'sillas_ruedas', 'cajones'):
         sc[k] = S[k]
     print("=" * 78)
-    print("ESTADIO OASIS + LA LÍNEA EN ANILLO — generado")
+    print("ESTADIO YAXCHÉ + PLAZA SAKBÉ — generado")
     for ln in report:
         print(ln)
     print(f"Árboles: {S['arboles']:,} | "
