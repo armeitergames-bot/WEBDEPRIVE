@@ -79,8 +79,8 @@ TIERS = [
 
 # supuestos de consumo (ajústalos)
 EVENTS_PER_YEAR = 60
-PV_KWP_M2, PV_YIELD = 0.21, 1600          # kWp/m² y kWh/kWp·año en cubierta
-BIPV_KWP_M2, BIPV_YIELD = 0.12, 650       # fachada fotovoltaica vertical
+PV_KWP_M2, PV_YIELD = 0.18, 1460          # kWp/m² y kWh/kWp·año en cubierta (con pérdidas reales, ver Modelo_Financiero)
+BIPV_KWP_M2, BIPV_YIELD = 0.12, 555       # fachada fotovoltaica vertical (~38 % de la cubierta)
 RAIN_M = 0.70                             # lluvia anual (m)
 
 STATS = {}

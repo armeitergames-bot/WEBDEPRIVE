@@ -28,6 +28,7 @@ Solo se modelan el estadio, la plaza en anillo y una explanada alrededor. La ciu
 | `estadio_yaxche.py` | El script que lo genera todo (modificable). |
 | `previews/` | Renders de las cámaras incluidas. |
 | `Presupuesto_Materiales_Yaxche_Sakbe.xlsx` | Presupuesto paramétrico (209 partidas) y lista de 152 materiales e insumos. |
+| `Modelo_Financiero_Yaxche_Sakbe.xlsx` | Ingresos (41 fuentes), energía, agua, costos de operación, flujo a 30 años y derrama, en 3 escenarios. |
 | `Recorrido_Estadio_Yaxche_Plaza_Sakbe.mp4` | Video del recorrido (48 s, 10 tomas). |
 
 ## Costo de construcción (estimado de concepto ±25 %)
@@ -41,6 +42,32 @@ Solo se modelan el estadio, la plaza en anillo y una explanada alrededor. La ciu
 | **Total con IVA** | **61,765 millones (≈ USD 3,340 millones)** |
 
 Sin terreno. El desglose, los supuestos editables y la lista completa de materiales están en el Excel.
+
+## Cuánto genera y cuándo se recupera
+
+Escenario base, en millones de pesos de 2026 (sin inflación ni IVA). Detalle y supuestos editables en
+`Modelo_Financiero_Yaxche_Sakbe.xlsx`.
+
+| | Conservador | **Base** | Optimista |
+|---|---|---|---|
+| Días de evento · conciertos al año | 42 · 8 | **58 · 12** | 77 · 18 |
+| Ingresos | 2,500 | **4,470** | 7,500 |
+| Costos de operación | 1,880 | **1,720** | 1,630 |
+| Queda cada año (EBITDA) | 620 | **2,750** | 5,870 |
+| Recuperación (con flujo, después de ISR) | más de 30 años | **≈ 20 años** | ≈ 12 años |
+| TIR real después de ISR | negativa | **2.0 %** | 6.9 % |
+
+- **De dónde sale el dinero (base):**
+  - Plaza Sakbé 1,941 M: rentas, estacionamiento diario y cuota de mantenimiento.
+  - Palcos, asientos club, naming y patrocinios 965 M.
+  - Rentas de eventos, cuota por boleto y boletaje 797 M.
+  - Comida, VIP y estacionamiento en eventos 571 M.
+  - Días sin evento (tours, caminata en el techo, congresos, filmación) 175 M.
+  - Energía y reciclaje 18 M.
+- **Cada concierto extra** deja ≈ 45 M netos.
+- **Si el gobierno pone la obra común** (estacionamiento, explanada y redes: 18,316 M), la recuperación simple
+  baja de 19.4 a 12.7 años.
+- **Derrama:** ≈ 25,000 M al año en la ciudad, ≈ 5,800 empleos fijos y ≈ 16,000 durante la obra.
 
 ## Medidas (largo × ancho)
 
@@ -181,13 +208,20 @@ El sonido se controla con varias capas:
 
 La meta es ≤ 60 dB(A) en la fachada exterior durante un concierto (la NOM-081 permite 68 de día).
 
-## Consumo aproximado
+## Energía y agua (escenario base)
 
-| | Estadio | Plaza Sakbé |
-|---|---|---|
-| Electricidad | ≈ 8.7 GWh/año | ≈ 44 GWh/año (+ 3.8 del estacionamiento) |
-| Solar en sitio | ≈ 16 GWh/año (10.1 MWp) | ≈ 4 GWh/año |
-| Agua | ≈ 94,000 m³/año | ≈ 212,000 m³/año + riego ≈ 29,000 |
-| Lluvia captada | ≈ 55,000 m³/año | |
+| | Por año |
+|---|---|
+| Paneles: 8.7 MWp en la cubierta + pérgolas + vidrio solar = 13.1 MWp | **15.9 GWh** (la cubierta sola, 12.6) |
+| Energía solar que se pierde (calor, polvo, sombra, inversores, cables) | 4.8 GWh (23 %) |
+| Consumo: estadio 8.6 + plaza 44.4 + estacionamiento y cargadores 5.6 | **58.6 GWh** |
+| Se compra a la red | **42.7 GWh ≈ 119 M MXN** (39 M el dueño, 81 M los locatarios) |
+| Ahorro por los paneles | ≈ 45 M MXN |
+| Agua: 333,000 m³; lluvia 55,000 + reúso 122,000 | 53 % no viene de la red |
+
+La cubierta genera 1.5 veces lo que gasta el estadio, pero el conjunto consume 3.7 veces lo que dan los
+paneles. Los paneles de la cubierta se pagan en ≈ 13 años; el vidrio solar de la fachada tarda ≈ 62 años.
+Esto corrige la cifra anterior de 16 GWh solo en la cubierta, que no contaba las pérdidas reales
+(rendimiento de 1,460 kWh por kWp, no 1,600; 0.18 kWp por m², no 0.21).
 
 Es un modelo conceptual / de volumetría, no un proyecto ejecutivo.
